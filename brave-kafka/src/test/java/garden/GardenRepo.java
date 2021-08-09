@@ -1,7 +1,6 @@
 package garden;
 
 import brave.kafka.BraveProducers;
-import brave.kafka.InjectProducer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.Producer;
@@ -12,15 +11,13 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.ExecutionException;
 
 
-@BraveProducers(
-        bootstrapServers = "${kafka.bootstrap.servers}"
-)
 @Getter
 @Slf4j
 @Component
+@BraveProducers(bootstrapServers = "${kafka.bootstrap.servers}")
 public class GardenRepo {
 
-    @InjectProducer(
+    @BraveProducers.Inject(
             keySerializer = "garden.SeedSerializer",
             valueSerializer = "garden.FruitSerializer",
             acks = "all"

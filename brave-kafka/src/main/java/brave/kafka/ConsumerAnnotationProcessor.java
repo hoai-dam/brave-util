@@ -63,7 +63,7 @@ class ConsumerAnnotationProcessor {
             properties = getKafkaConsumerProperties(consumersAnnotation);
             Map<String, SimpleConsumerGroup<?, ?>> consumerGroups = new LinkedHashMap<>();
             for (Method method : target.getClass().getDeclaredMethods()) {
-                RecordConsumer handlerAnnotation = method.getAnnotation(RecordConsumer.class);
+                BraveConsumers.Handler handlerAnnotation = method.getAnnotation(BraveConsumers.Handler.class);
                 if (handlerAnnotation == null) continue;
 
                 String consumerGroupName = signature(method);
@@ -119,8 +119,8 @@ class ConsumerAnnotationProcessor {
             return props;
         }
 
-        private SimpleConsumerGroup<Object, Object> getConsumerGroup(Method method, RecordConsumer recordConsumer) {
-            RecordConsumer.Config cfg = getRecordConsumerConfig(recordConsumer);
+        private SimpleConsumerGroup<Object, Object> getConsumerGroup(Method method, BraveConsumers.Handler recordConsumer) {
+            BraveConsumers.Handler.Config cfg = getRecordConsumerConfig(recordConsumer);
 
             if (method.getParameterCount() == 0 || method.getParameterCount() > 2) {
                 throw new IllegalStateException(
@@ -168,7 +168,7 @@ class ConsumerAnnotationProcessor {
         }
     }
 
-    private RecordConsumer.Config getRecordConsumerConfig(RecordConsumer recordConsumer) {
+    private BraveConsumers.Handler.Config getRecordConsumerConfig(BraveConsumers.Handler recordConsumer) {
         Properties props;
         if (StringUtils.isNotBlank(recordConsumer.properties())) {
             props = resolver.getProperties(recordConsumer.properties());
@@ -203,7 +203,7 @@ class ConsumerAnnotationProcessor {
                 ? resolver.getInstance(recordConsumer.valueDeserializer(), Deserializer.class)
                 : resolver.getInstance(props.getProperty("value-deserializer"), Deserializer.class);
 
-        return RecordConsumer.Config.builder()
+        return BraveConsumers.Handler.Config.builder()
                 .topics(Arrays.asList(topics))
                 .threadsCount(threadsCount)
                 .ignoreException(ignoreException)

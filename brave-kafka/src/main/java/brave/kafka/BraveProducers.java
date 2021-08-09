@@ -11,4 +11,13 @@ public @interface BraveProducers {
 
     String bootstrapServers();
 
+    @Target(ElementType.FIELD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Inject {
+
+        String acks() default "1";
+        String keySerializer() default "org.apache.kafka.common.serialization.ByteArraySerializer";
+        String valueSerializer() default "org.apache.kafka.common.serialization.ByteArraySerializer";
+
+    }
 }

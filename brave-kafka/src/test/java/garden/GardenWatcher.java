@@ -2,7 +2,6 @@ package garden;
 
 
 import brave.kafka.BraveConsumers;
-import brave.kafka.RecordConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -23,7 +22,7 @@ public class GardenWatcher {
 
     private final CountDownLatch fullGardenLatch = new CountDownLatch(5);
 
-    @RecordConsumer(
+    @BraveConsumers.Handler(
             keyDeserializer = "garden.SeedDeserializer",
             valueDeserializer = "garden.FruitDeserializer",
             properties = "replicate.garden-watcher"

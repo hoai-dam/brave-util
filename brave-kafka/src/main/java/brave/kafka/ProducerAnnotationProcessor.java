@@ -36,10 +36,10 @@ public class ProducerAnnotationProcessor {
             }
 
             for (Field field : target.getClass().getDeclaredFields()) {
-                InjectProducer injectProducer = field.getAnnotation(InjectProducer.class);
+                BraveProducers.Inject injectProducer = field.getAnnotation(BraveProducers.Inject.class);
                 if (injectProducer == null) continue;
                 if (field.getType() != Producer.class) {
-                    throw new IllegalStateException("Only apply " + InjectProducer.class.getName() + " on fields of type " + Producer.class.getName());
+                    throw new IllegalStateException("Only apply " + BraveProducers.Inject.class.getName() + " on fields of type " + Producer.class.getName());
                 }
 
                 Properties properties = getKafkaConsumerProperties(braveProducers, injectProducer);
@@ -64,7 +64,7 @@ public class ProducerAnnotationProcessor {
         }
     }
 
-    private Properties getKafkaConsumerProperties(BraveProducers braveProducers, InjectProducer injectProducer) {
+    private Properties getKafkaConsumerProperties(BraveProducers braveProducers, BraveProducers.Inject injectProducer) {
         var properties = new Properties();
 
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, configResolver.getString(braveProducers.bootstrapServers()));
