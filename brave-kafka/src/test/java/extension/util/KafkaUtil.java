@@ -33,10 +33,6 @@ public class KafkaUtil {
 
     private final static ExtensionContext.Namespace kafkaNamespace = ExtensionContext.Namespace.create("kafka");
 
-    public static ExtensionContext.Namespace defaultNamespace() {
-        return kafkaNamespace;
-    }
-
     public static ObjectMapper objectMapper(ExtensionContext context) {
         ApplicationContext appContext = SpringExtension.getApplicationContext(context);
         return appContext.getBean(ObjectMapper.class);

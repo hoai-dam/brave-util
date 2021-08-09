@@ -31,10 +31,13 @@ public class GardenWatcher {
     public void process(ConsumerRecord<Seed, Fruit> cr, Consumer<Seed, Fruit> consumer) {
         log.warn("Got seed {} flower {}", cr.key(), cr.value());
         fullGardenLatch.countDown();
+        if (fullGardenLatch.getCount() == 0) {
+            log.info("Garden is now full");
+        }
         consumer.commitSync();
     }
 
-    public boolean waitUntilFullGarden(Duration duration) throws InterruptedException {
+    public boolean waitUntilGardenIsFull(Duration duration) throws InterruptedException {
         return fullGardenLatch.await(duration.toMillis(), TimeUnit.MILLISECONDS);
     }
 
