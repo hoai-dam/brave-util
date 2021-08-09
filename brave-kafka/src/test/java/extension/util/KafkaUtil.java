@@ -1,5 +1,6 @@
 package extension.util;
 
+import brave.kafka.KafkaConfigResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import net.manub.embeddedkafka.EmbeddedKafka;
@@ -31,19 +32,33 @@ import static org.apache.kafka.common.serialization.Serdes.String;
 @Slf4j
 public class KafkaUtil {
 
-    private final static ExtensionContext.Namespace kafkaNamespace = ExtensionContext.Namespace.create("kafka");
-
     public static ObjectMapper objectMapper(ExtensionContext context) {
         ApplicationContext appContext = SpringExtension.getApplicationContext(context);
         return appContext.getBean(ObjectMapper.class);
     }
 
+    public static String getBootstrapServers(ApplicationContext appContext) {
+        KafkaConfigResolver configResolver = appContext.getBean(KafkaConfigResolver.class);
+        return configResolver.getString("${kafka.bootstrap.servers}");
+    }
+
     public static String getBootstrapServers(ExtensionContext context) {
-        return "localhost:9092";
+        ApplicationContext appContext = SpringExtension.getApplicationContext(context);
+        KafkaConfigResolver configResolver = appContext.getBean(KafkaConfigResolver.class);
+        return configResolver.getString("${kafka.bootstrap.servers}");
     }
 
     public static int getBootstrapPort(ExtensionContext context) {
-       return 9092;
+        String firstBootstrapServer = getBootstrapServers(context);
+        String[] urlParts = firstBootstrapServer.split(":");
+
+        if (urlParts.length == 2 || urlParts.length == 3)
+            return Integer.parseInt(urlParts[urlParts.length - 1]);
+
+        if (urlParts.length == 1)
+            return 80;
+
+        throw new IllegalArgumentException("Unrecognized bootstrap server " + firstBootstrapServer);
     }
 
     /**
@@ -78,7 +93,8 @@ public class KafkaUtil {
                 Serdes.String().serializer());
     }
 
-    public static KafkaConsumer<String, String> createConsumer(String bootstrapServers, String groupId) {
+    public static KafkaConsumer<String, String> createConsumer(ApplicationContext context, String groupId) {
+        String bootstrapServers= getBootstrapServers(context);
         Properties properties = new Properties();
         properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);

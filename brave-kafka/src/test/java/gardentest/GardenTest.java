@@ -15,11 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.*;
 
 import static java.util.stream.Collectors.toList;
@@ -32,6 +35,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         KafkaDataExtension.class
 })
 public class GardenTest {
+
+    @Autowired
+    ApplicationContext context;
 
     @Autowired(required = false)
     GardenWatcher gardenWatcher;
@@ -61,35 +67,49 @@ public class GardenTest {
                 gardenRepo.plant(new Seed("Watermelon"))
         );
 
-        Consumer<String, String> metricsConsumer = KafkaUtil.createConsumer("localhost:9092", "garden-metrics-collector");
-        metricsConsumer.subscribe(List.of(gardenRepo.getGardenMetricTopic()));
+        List<Entry<Seed, Fruit>> gardenEvents = consume(
+                gardenRepo.getGardenMetricTopic(),
+                expectedFruits.size(),
+                Seed.class,
+                Fruit.class
+        );
+
+        List<Fruit> actualFruits = gardenEvents.stream()
+                .map(Entry::getValue)
+                .collect(toList());
+
+        assertThat(actualFruits).containsExactlyInAnyOrderElementsOf(expectedFruits);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private <K,V> List<Entry<K, V>> consume(String topic, int eventCount, Class<K> keyClass, Class<V> valueClass) throws InterruptedException {
+        Consumer<String, String> metricsConsumer = KafkaUtil.createConsumer(context, "garden-metrics-collector");
+        metricsConsumer.subscribe(List.of(topic));
 
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        CountDownLatch fruitCounter = new CountDownLatch(expectedFruits.size());
-        List<String> rawGardenEvents = new ArrayList<>();
+        CountDownLatch fruitCounter = new CountDownLatch(eventCount);
+        List<Entry<K, V>> events = new ArrayList<>();
 
         executorService.execute(() -> {
             while (fruitCounter.getCount() > 0) {
                 ConsumerRecords<String, String> records = metricsConsumer.poll(Duration.ofMillis(1000));
                 for (var record : records) {
-                    rawGardenEvents.add(record.value());
-                    fruitCounter.countDown();
+                    try {
+                        events.add(Map.entry(
+                                objectMapper.readValue(record.key(), keyClass),
+                                objectMapper.readValue(record.value(), valueClass)
+                        ));
+                        fruitCounter.countDown();
+                    } catch (JsonProcessingException jpex) {
+                        throw new IllegalStateException(jpex);
+                    }
                 }
             }
         });
 
-        boolean fruitCountFinished = fruitCounter.await(10, TimeUnit.SECONDS);
+        //noinspection ResultOfMethodCallIgnored
+        fruitCounter.await(10, TimeUnit.SECONDS);
         executorService.shutdownNow();
-
-        List<Fruit> actualFruits = rawGardenEvents.stream().map(rawEvent -> {
-            try {
-                return objectMapper.readValue(rawEvent, Fruit.class);
-            } catch (JsonProcessingException e) {
-                throw new IllegalStateException(e);
-            }
-        }).collect(toList());
-
-        assertThat(fruitCountFinished).isTrue();
-        assertThat(actualFruits).containsExactlyInAnyOrderElementsOf(expectedFruits);
+        return events;
     }
 }

@@ -2,7 +2,6 @@ package brave.kafka;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.AbstractEnvironment;
-import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.expression.ExpressionParser;
@@ -22,7 +21,6 @@ public class KafkaConfigResolver {
     private final StringValueResolver valueResolver;
     private final ExpressionParser expressionParser;
     private final AbstractEnvironment environment;
-    private final ConfigurableEnvironment env;
 
     public Properties getProperties(String path) {
         Properties properties = new Properties();

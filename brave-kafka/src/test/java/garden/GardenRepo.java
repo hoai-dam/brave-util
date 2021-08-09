@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 
 
 @BraveProducers(
-        bootstrapServers = "${kafka.consumer.bootstrap.servers}"
+        bootstrapServers = "${kafka.bootstrap.servers}"
 )
 @Getter
 @Slf4j
@@ -26,7 +26,7 @@ public class GardenRepo {
             acks = "all"
     )
     private Producer<Seed, Fruit> gardenProducer;
-    private String gardenMetricTopic = "connect.garden.metrics";
+    private final String gardenMetricTopic = "connect.garden.metrics";
 
     public Fruit plant(Seed seed) throws ExecutionException, InterruptedException {
         Fruit fruit = new Fruit(seed.getName());

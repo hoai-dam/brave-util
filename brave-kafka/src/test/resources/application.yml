@@ -5,22 +5,23 @@ spring:
 
 replicate:
   garden-watcher:
-    topics: ${replicate_garden_watcher_changes_topic:connect.garden.changes}
-    threads-count: ${replicate_garden_watcher_threads_count:1}
-    polling-timeout: ${replicate_garden_watcher_polling_timeout:PT1S}
-    ignore-exception: ${replicate_garden_watcher_ignore_exception:true}
-    report-health-check: ${replicate_garden_watcher_report_health_check:true}
-    key-deserializer: ${replicate_garden_watcher_key_deserializer:}
-    value-deserializer: ${replicate_garden_watcher_value_deserializer:}
+    topics: connect.garden.changes
+    threads-count: 1
+    polling-timeout: PT1S
+    ignore-exception: true
+    report-health-check: true
+    key-deserializer:
+    value-deserializer:
 
 kafka:
+  bootstrap.servers: localhost:9092
   consumer:
     # Kafka consumer properties as keys
-    bootstrap.servers: ${kafka_consumer_bootstrap_servers:localhost:9092}
-    group.id: ${kafka_consumer_group_id:${spring.application.name}}
-    enable.auto.commit: ${kafka_consumer_enable_auto_commit:false}
-    auto.commit.interval.ms: ${kafka_consumer_auto_commit_interval:PT5S}
-    auto.offset.reset: ${kafka_consumer_auto_offset_reset:earliest}
-    max.poll.interval.ms: ${kafka_consumer_max_poll_interval:PT5M}
-    max.poll.records: ${kafka_consumer_max_poll_records:200}
-    session.timeout.ms: ${kafka_consumer_session_timeout:PT10S}
+    bootstrap.servers: ${kafka.bootstrap.servers}
+    group.id: ${spring.application.name}
+    enable.auto.commit: false
+    auto.commit.interval.ms: PT5S
+    auto.offset.reset: earliest
+    max.poll.interval.ms: PT5M
+    max.poll.records: 200
+    session.timeout.ms: PT10S
