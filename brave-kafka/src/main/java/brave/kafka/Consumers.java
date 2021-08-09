@@ -3,6 +3,7 @@ package brave.kafka;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.kafka.common.serialization.BytesDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import java.lang.annotation.ElementType;
@@ -14,30 +15,30 @@ import java.util.List;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface BraveConsumers {
+public @interface Consumers {
 
-    String bootstrapServers() default "";
-    String groupId() default "";
-    String enableAutoCommit() default "";
-    String autoCommitInterval() default "";
-    String autoOffsetReset() default "";
-    String maxPollInterval() default "";
-    String maxPollRecords() default "";
-    String sessionTimeout() default "";
     String properties() default "";
+    String[] bootstrapServers() default {};
+    String groupId() default "";
+    boolean enableAutoCommit() default true;
+    int autoCommitIntervalMillis() default 5000;
+    String autoOffsetReset() default "latest";
+    int maxPollIntervalMillis() default 300000;
+    int maxPollRecords() default 512;
+    int sessionTimeoutMillis() default 10000;
 
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
     @interface Handler {
 
-        String[] topics() default {};
-        String pollingTimeout() default "";
-        String threadsCount() default "";
-        String ignoreException() default "";
-        String reportHealthCheck() default "";
-        String keyDeserializer() default "";
-        String valueDeserializer() default "";
         String properties() default "";
+        String[] topics() default {};
+        int pollingTimeoutMillis() default 1000;
+        int threadsCount() default 1;
+        boolean ignoreException() default false;
+        boolean reportHealthCheck() default true;
+        Class<? extends Deserializer> keyDeserializer() default BytesDeserializer.class;
+        Class<? extends Deserializer> valueDeserializer() default BytesDeserializer.class;
 
         @Setter
         @Getter

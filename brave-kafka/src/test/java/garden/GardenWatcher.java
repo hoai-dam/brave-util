@@ -1,7 +1,7 @@
 package garden;
 
 
-import brave.kafka.BraveConsumers;
+import brave.kafka.Consumers;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -11,10 +11,10 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-@BraveConsumers(
+@Consumers(
+        properties = "kafka.consumer",
         groupId = "garden-watcher",
-        enableAutoCommit = "false",
-        properties = "kafka.consumer"
+        enableAutoCommit = false
 )
 @Slf4j
 @Component
@@ -22,10 +22,10 @@ public class GardenWatcher {
 
     private final CountDownLatch fullGardenLatch = new CountDownLatch(5);
 
-    @BraveConsumers.Handler(
-            keyDeserializer = "garden.SeedDeserializer",
-            valueDeserializer = "garden.FruitDeserializer",
-            properties = "replicate.garden-watcher"
+    @Consumers.Handler(
+            properties = "replicate.garden-watcher",
+            keyDeserializer = garden.SeedDeserializer.class,
+            valueDeserializer = garden.FruitDeserializer.class
     )
     public void process(ConsumerRecord<Seed, Fruit> cr, Consumer<Seed, Fruit> consumer) {
         log.warn("Got seed {} flower {}", cr.key(), cr.value());
