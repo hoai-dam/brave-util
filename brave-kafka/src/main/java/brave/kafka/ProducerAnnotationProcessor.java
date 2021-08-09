@@ -44,9 +44,9 @@ public class ProducerAnnotationProcessor {
 
                 Properties properties = getKafkaConsumerProperties(braveProducers, injectProducer);
                 //noinspection unchecked
-                Serializer<Object> keySer = configResolver.getInstance(injectProducer.keySerializer(), Serializer.class);
+                Serializer<Object> keySer = configResolver.getInstance(injectProducer.keySerializer());
                 //noinspection unchecked
-                Serializer<Object> valueSer = configResolver.getInstance(injectProducer.valueSerializer(), Serializer.class);
+                Serializer<Object> valueSer = configResolver.getInstance(injectProducer.valueSerializer());
                 KafkaProducer<Object, Object> producer = new KafkaProducer<>(properties, keySer, valueSer);
 
                 boolean accessible = field.canAccess(target);

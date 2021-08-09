@@ -1,5 +1,8 @@
 package brave.kafka;
 
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.Serializer;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -16,8 +19,8 @@ public @interface Producers {
     @interface Inject {
 
         String acks() default "1";
-        String keySerializer() default "org.apache.kafka.common.serialization.ByteArraySerializer";
-        String valueSerializer() default "org.apache.kafka.common.serialization.ByteArraySerializer";
+        Class<? extends Serializer> keySerializer() default ByteArraySerializer.class;
+        Class<? extends Serializer> valueSerializer() default ByteArraySerializer.class;
 
     }
 }

@@ -18,8 +18,8 @@ import java.util.concurrent.ExecutionException;
 public class GardenRepo {
 
     @Producers.Inject(
-            keySerializer = "garden.SeedSerializer",
-            valueSerializer = "garden.FruitSerializer",
+            keySerializer = garden.SeedSerializer.class,
+            valueSerializer = garden.FruitSerializer.class,
             acks = "all"
     )
     private Producer<Seed, Fruit> gardenProducer;
