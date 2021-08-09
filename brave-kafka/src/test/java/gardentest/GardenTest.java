@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import extension.KafkaDataExtension;
 import extension.KafkaServerExtension;
 import extension.util.KafkaUtil;
-import garden.Fruit;
-import garden.GardenRepo;
-import garden.GardenWatcher;
-import garden.Seed;
+import garden.*;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.junit.jupiter.api.Test;
@@ -39,8 +36,11 @@ public class GardenTest {
     @Autowired
     ApplicationContext context;
 
-    @Autowired(required = false)
+    @Autowired
     GardenWatcher gardenWatcher;
+
+    @Autowired
+    GardenWatcherInBatch gardenWatcherInBatch;
 
     @Autowired
     GardenRepo gardenRepo;
@@ -52,6 +52,13 @@ public class GardenTest {
     void consumerOfGardenChanges_shouldBeActive() throws InterruptedException {
         assertThat(gardenWatcher).isNotNull();
         boolean gardenIsFull = gardenWatcher.waitUntilGardenIsFull(Duration.ofSeconds(10));
+        assertThat(gardenIsFull).isTrue();
+    }
+
+    @Test
+    void batchConsumerOfGardenChanges_shouldBeActive() throws InterruptedException {
+        assertThat(gardenWatcherInBatch).isNotNull();
+        boolean gardenIsFull = gardenWatcherInBatch.waitUntilGardenIsFull(Duration.ofSeconds(10));
         assertThat(gardenIsFull).isTrue();
     }
 

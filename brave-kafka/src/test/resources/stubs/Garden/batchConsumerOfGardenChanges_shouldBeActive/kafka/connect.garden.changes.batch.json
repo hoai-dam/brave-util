@@ -1,0 +1,62 @@
+[
+  {
+    "timestamp": 1589955585911,
+    "partition": 1,
+    "key": {
+      "name": "Apple"
+    },
+    "offset": 12981185,
+    "topic": "connect.garden.changes",
+    "value": {
+      "name": "Apple"
+    }
+  },
+  {
+    "timestamp": 1589955585911,
+    "partition": 1,
+    "key": {
+      "name": "Orange"
+    },
+    "offset": 12981185,
+    "topic": "connect.garden.changes",
+    "value": {
+      "name": "Orange"
+    }
+  },
+  {
+    "timestamp": 1589955585911,
+    "partition": 1,
+    "key": {
+      "name": "Banana"
+    },
+    "offset": 12981185,
+    "topic": "connect.garden.changes",
+    "value": {
+      "name": "Banana"
+    }
+  },
+  {
+    "timestamp": 1589955585911,
+    "partition": 1,
+    "key": {
+      "name": "Kiwi"
+    },
+    "offset": 12981185,
+    "topic": "connect.garden.changes",
+    "value": {
+      "name": "Kiwi"
+    }
+  },
+  {
+    "timestamp": 1589955585911,
+    "partition": 1,
+    "key": {
+      "name": "Mango"
+    },
+    "offset": 12981185,
+    "topic": "connect.garden.changes",
+    "value": {
+      "name": "Mango"
+    }
+  }
+]

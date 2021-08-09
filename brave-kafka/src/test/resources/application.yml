@@ -12,6 +12,14 @@ replicate:
     report-health-check: true
     key-deserializer:
     value-deserializer:
+  garden-watcher-in-batch:
+    topics: connect.garden.changes.batch
+    threads-count: 1
+    polling-timeout: PT1S
+    ignore-exception: true
+    report-health-check: true
+    key-deserializer:
+    value-deserializer:
 
 kafka:
   bootstrap.servers: localhost:9092

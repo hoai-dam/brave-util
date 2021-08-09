@@ -11,13 +11,9 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-@Consumers(
-        properties = "kafka.consumer",
-        groupId = "garden-watcher",
-        enableAutoCommit = false
-)
 @Slf4j
 @Component
+@Consumers(properties = "kafka.consumer", groupId = "garden-watcher", enableAutoCommit = false)
 public class GardenWatcher {
 
     private final CountDownLatch fullGardenLatch = new CountDownLatch(5);
