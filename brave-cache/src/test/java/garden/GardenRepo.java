@@ -13,7 +13,7 @@ import java.util.Map;
 @Cacheable(
         name = "gardenCache",
         timeToLive = "PT5M",
-        backend = "LOCAL",
+        backend = "REDIS",
         local = @Cacheable.Local(
                 keyClass = Seed.class,
                 valueClass = Fruit.class

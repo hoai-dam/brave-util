@@ -1,5 +1,6 @@
 package gardentest;
 
+import extension.RedisServerExtension;
 import garden.Fruit;
 import garden.GardenInvalidator;
 import garden.GardenRepo;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @SpringBootTest(classes = AppConfig.class)
-@ExtendWith(SpringExtension.class)
+@ExtendWith({SpringExtension.class, RedisServerExtension.class})
 public class GardenTest {
 
     @Autowired

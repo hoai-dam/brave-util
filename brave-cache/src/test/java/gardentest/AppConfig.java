@@ -9,8 +9,12 @@ import org.springframework.context.annotation.Configuration;
 @ComponentScan(basePackages = {"brave", "garden"})
 public class AppConfig {
 
+    public int redisPort() {
+        return 6789;
+    }
+
     @Bean
     RedisClient redisClient() {
-        return RedisClient.create("redis://localhost:6379");
+        return RedisClient.create("redis://localhost:" + redisPort());
     }
 }
