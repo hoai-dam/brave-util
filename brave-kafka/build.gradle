@@ -31,7 +31,7 @@ dependencies {
     testCompileOnly "org.projectlombok:lombok:$lombokVersion"
     testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
 
-    testImplementation 'io.github.embeddedkafka:embedded-kafka_2.13:2.6.0'
+    testImplementation "io.github.embeddedkafka:embedded-kafka_2.13:$kafkaClientsVersion"
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
