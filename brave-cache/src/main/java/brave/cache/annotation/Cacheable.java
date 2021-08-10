@@ -1,5 +1,8 @@
 package brave.cache.annotation;
 
+import brave.cache.codec.ByteArrayCodec;
+import brave.cache.codec.Codec;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -11,15 +14,15 @@ public @interface Cacheable
 {
 
     String name();
-    String backend() default "REDIS";
+    String backend() default "LOCAL";
     String timeToLive();
     Local local() default @Local(
             keyClass = void.class,
             valueClass = void.class
     );
     Redis redis() default @Redis(
-            keyCodec = "",
-            valueCodec = ""
+            keyCodec = ByteArrayCodec.class,
+            valueCodec = ByteArrayCodec.class
     );
 
     @interface Local {
@@ -31,8 +34,8 @@ public @interface Cacheable
     }
 
     @interface Redis {
-        String keyCodec();
-        String valueCodec();
+        Class<? extends Codec<?>> keyCodec();
+        Class<? extends Codec<?>> valueCodec();
     }
 
     @Retention(RetentionPolicy.RUNTIME)

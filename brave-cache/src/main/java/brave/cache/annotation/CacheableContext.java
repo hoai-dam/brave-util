@@ -62,8 +62,8 @@ public class CacheableContext {
 
         if (backend == REDIS) {
             RedisClient redisClient = context.getBean(RedisClient.class);
-            Codec<Object> keyCodec = configResolver.getInstance(cacheable.redis().keyCodec(), Codec.class);
-            Codec<Object> valueCodec = configResolver.getInstance(cacheable.redis().valueCodec(), Codec.class);
+            Codec<Object> keyCodec = (Codec<Object>) configResolver.getInstance(cacheable.redis().keyCodec());
+            Codec<Object> valueCodec = (Codec<Object>) configResolver.getInstance(cacheable.redis().valueCodec());
 
             RedisCache.Builder<Object, Object> cacheBuilder = new RedisCache.Builder<>()
                     .redisClient(redisClient)

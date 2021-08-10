@@ -3,7 +3,7 @@ package brave.kafka;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.kafka.common.serialization.BytesDeserializer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import java.lang.annotation.ElementType;
@@ -37,8 +37,8 @@ public @interface Consumers {
         int threadsCount() default 1;
         boolean ignoreException() default false;
         boolean reportHealthCheck() default true;
-        Class<? extends Deserializer> keyDeserializer() default BytesDeserializer.class;
-        Class<? extends Deserializer> valueDeserializer() default BytesDeserializer.class;
+        Class<? extends Deserializer> keyDeserializer() default ByteArrayDeserializer.class;
+        Class<? extends Deserializer> valueDeserializer() default ByteArrayDeserializer.class;
 
         @Setter
         @Getter

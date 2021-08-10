@@ -19,8 +19,8 @@ import java.util.Map;
                 valueClass = Fruit.class
         ),
         redis = @Cacheable.Redis(
-                keyCodec = "garden.SeedCodec",
-                valueCodec = "garden.FruitCodec"
+                keyCodec = garden.SeedCodec.class,
+                valueCodec = garden.FruitCodec.class
         ))
 @Component
 public class GardenRepo implements SingleLoader<Seed, Fruit>, MultiLoader<Seed, Fruit> {

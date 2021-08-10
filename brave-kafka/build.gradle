@@ -39,6 +39,14 @@ dependencies {
     }
 }
 
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
 test {
     useJUnitPlatform()
     testLogging {

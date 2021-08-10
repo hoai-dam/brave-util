@@ -102,4 +102,12 @@ public class ConfigResolver {
             throw new IllegalStateException("Cannot resolve expression '" + expression + "'");
         }
     }
+
+    public <T> T getInstance(Class<T> clazz) {
+        try {
+            return clazz.getConstructor().newInstance();
+        } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            throw new IllegalStateException("Failed to construct " + clazz.getName(), e);
+        }
+    }
 }
