@@ -11,7 +11,7 @@ public @interface Cacheable
 {
 
     String name();
-    String backend() default "REACTIVE_REDIS";
+    String backend() default "REDIS";
     String timeToLive();
     Local local() default @Local(
             keyClass = void.class,
