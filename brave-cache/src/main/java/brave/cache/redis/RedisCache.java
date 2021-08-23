@@ -108,11 +108,9 @@ public class RedisCache<K, V> implements Cache<K, V>, AutoCloseable{
         if (multiLoader == null) return emptyMap();
         Map<K, V> keyValues = multiLoader.loadAll(missingKeys);
 
-        syncCommands().multi();
         for (var kv : keyValues.entrySet()) {
             syncCommands().psetex(kv.getKey(), defaultTimeToLiveMillis, kv.getValue());
         }
-        syncCommands().exec();
 
         return keyValues;
     }
