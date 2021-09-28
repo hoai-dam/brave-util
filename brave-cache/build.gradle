@@ -15,7 +15,6 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
-
     implementation "org.apache.commons:commons-lang3:$commonLangVersion"
 
     implementation "org.cache2k:cache2k-api:$cache2kVersion"
@@ -31,9 +30,7 @@ dependencies {
     testCompileOnly "org.projectlombok:lombok:$lombokVersion"
     testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
 
-    testImplementation 'it.ozimov:embedded-redis:0.7.3'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation project(':brave-test')
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
     }

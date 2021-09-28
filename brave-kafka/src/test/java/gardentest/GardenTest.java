@@ -1,16 +1,17 @@
 package gardentest;
 
+import brave.extension.KafkaDataExtension;
+import brave.extension.KafkaServerExtension;
+import brave.extension.util.KafkaUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import extension.KafkaDataExtension;
-import extension.KafkaServerExtension;
-import extension.util.KafkaUtil;
 import garden.*;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -47,6 +48,9 @@ public class GardenTest {
 
     @Autowired
     ObjectMapper objectMapper;
+
+    @Value("${kafka.bootstrap.servers}")
+    String kafkaBootstrapServers;
 
     @Test
     void consumerOfGardenChanges_shouldBeActive() throws InterruptedException {
@@ -90,7 +94,7 @@ public class GardenTest {
 
     @SuppressWarnings("SameParameterValue")
     private <K,V> List<Entry<K, V>> consume(String topic, int eventCount, Class<K> keyClass, Class<V> valueClass) throws InterruptedException {
-        Consumer<String, String> metricsConsumer = KafkaUtil.createConsumer(context, "garden-metrics-collector");
+        Consumer<String, String> metricsConsumer = KafkaUtil.createConsumer(kafkaBootstrapServers, "garden-metrics-collector");
         metricsConsumer.subscribe(List.of(topic));
 
         ExecutorService executorService = Executors.newSingleThreadExecutor();

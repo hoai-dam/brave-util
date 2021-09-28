@@ -1,6 +1,6 @@
-package extension;
+package brave.extension;
 
-import extension.util.KafkaUtil;
+import brave.extension.util.KafkaUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.manub.embeddedkafka.EmbeddedKafka;
 import org.junit.jupiter.api.extension.BeforeAllCallback;

@@ -1,6 +1,6 @@
 package gardentest;
 
-import extension.RedisServerExtension;
+import brave.extension.RedisServerExtension;
 import garden.Fruit;
 import garden.GardenInvalidator;
 import garden.GardenRepo;
@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.List;
@@ -17,6 +18,9 @@ import java.util.Map;
 
 @SpringBootTest(classes = AppConfig.class)
 @ExtendWith({SpringExtension.class, RedisServerExtension.class})
+@TestPropertySource(properties = {
+        "brave.test.redis.port=6789"
+})
 public class GardenTest {
 
     @Autowired

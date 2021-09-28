@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+}
+
+group 'brave'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.apache.kafka:kafka-clients:${kafkaClientsVersion}"
+    implementation "io.github.embeddedkafka:embedded-kafka_2.13:$kafkaClientsVersion"
+    implementation 'it.ozimov:embedded-redis:0.7.3'
+
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    implementation "org.slf4j:slf4j-api:1.7.30"
+
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    runtimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+configurations {
+    all {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
+}
+
+test {
+    useJUnitPlatform()
+}

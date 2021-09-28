@@ -1,11 +1,11 @@
-package extension;
+package brave.extension;
 
+import brave.extension.util.KafkaUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import extension.util.KafkaUtil;
 
 import java.util.Arrays;
 import java.util.List;

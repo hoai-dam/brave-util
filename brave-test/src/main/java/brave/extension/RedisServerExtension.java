@@ -1,10 +1,8 @@
-package extension;
+package brave.extension;
 
-import gardentest.AppConfig;
+import brave.extension.util.EnvironmentUtil;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.springframework.context.ApplicationContext;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import redis.embedded.RedisServer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,10 +47,8 @@ public class RedisServerExtension implements BeforeAllCallback, ExtensionContext
         }
     }
 
-    private int getConfiguredRedisPort(ExtensionContext classLevelContext) {
-        ApplicationContext appContext = SpringExtension.getApplicationContext(classLevelContext);
-        AppConfig appConfig = appContext.getBean(AppConfig.class);
-        return appConfig.redisPort();
+    private int getConfiguredRedisPort(ExtensionContext context) {
+        return EnvironmentUtil.getInt(context, "brave.test.redis.port", 6379);
     }
 
     @Override

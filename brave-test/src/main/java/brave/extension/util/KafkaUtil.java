@@ -1,6 +1,5 @@
-package extension.util;
+package brave.extension.util;
 
-import brave.kafka.KafkaConfigResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import net.manub.embeddedkafka.EmbeddedKafka;
@@ -17,8 +16,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.serialization.Serdes;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.springframework.context.ApplicationContext;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.junit.platform.commons.util.StringUtils;
 import scala.collection.immutable.HashMap;
 
 import java.io.IOException;
@@ -32,33 +30,18 @@ import static org.apache.kafka.common.serialization.Serdes.String;
 @Slf4j
 public class KafkaUtil {
 
-    public static ObjectMapper objectMapper(ExtensionContext context) {
-        ApplicationContext appContext = SpringExtension.getApplicationContext(context);
-        return appContext.getBean(ObjectMapper.class);
-    }
+    private static ObjectMapper objectMapper = new ObjectMapper();
 
-    public static String getBootstrapServers(ApplicationContext appContext) {
-        KafkaConfigResolver configResolver = appContext.getBean(KafkaConfigResolver.class);
-        return configResolver.getString("${kafka.bootstrap.servers}");
+    public static ObjectMapper getObjectMapper() {
+        return objectMapper;
     }
 
     public static String getBootstrapServers(ExtensionContext context) {
-        ApplicationContext appContext = SpringExtension.getApplicationContext(context);
-        KafkaConfigResolver configResolver = appContext.getBean(KafkaConfigResolver.class);
-        return configResolver.getString("${kafka.bootstrap.servers}");
+        return "localhost:" + getBootstrapPort(context);
     }
 
     public static int getBootstrapPort(ExtensionContext context) {
-        String firstBootstrapServer = getBootstrapServers(context);
-        String[] urlParts = firstBootstrapServer.split(":");
-
-        if (urlParts.length == 2 || urlParts.length == 3)
-            return Integer.parseInt(urlParts[urlParts.length - 1]);
-
-        if (urlParts.length == 1)
-            return 80;
-
-        throw new IllegalArgumentException("Unrecognized bootstrap server " + firstBootstrapServer);
+        return EnvironmentUtil.getInt(context, "brave.test.kafka.bootstrap.port", 9092);
     }
 
     /**
@@ -93,8 +76,7 @@ public class KafkaUtil {
                 Serdes.String().serializer());
     }
 
-    public static KafkaConsumer<String, String> createConsumer(ApplicationContext context, String groupId) {
-        String bootstrapServers= getBootstrapServers(context);
+    public static KafkaConsumer<String, String> createConsumer(String bootstrapServers, String groupId) {
         Properties properties = new Properties();
         properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
@@ -115,8 +97,8 @@ public class KafkaUtil {
         }
     }
 
-    public static AdminClient createAdminClient(ExtensionContext extensionContext) {
-        return createAdminClient(getBootstrapServers(extensionContext));
+    public static AdminClient createAdminClient(ExtensionContext context) {
+        return createAdminClient(getBootstrapServers(context));
     }
 
     public static AdminClient createAdminClient(String bootstrapServers) {
@@ -183,8 +165,8 @@ public class KafkaUtil {
     /**
      * Load all kafka events into plain text format.
      */
-    public static List<Entry<String, String>> loadEvents(ExtensionContext context, String resourceFile) throws IOException {
-        var objectMapper = objectMapper(context);
+    public static List<Entry<String, String>> loadEvents(String resourceFile) throws IOException {
+        var objectMapper = getObjectMapper();
         var resourceStream = KafkaUtil.class.getClassLoader().getResourceAsStream(resourceFile);
         var objectTree = objectMapper.reader().readTree(resourceStream);
 

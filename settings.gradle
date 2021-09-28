@@ -8,4 +8,5 @@ rootProject.name = 'brave-util'
 include 'brave-cache'
 include 'brave-kafka'
 include 'brave-metric'
+include 'brave-test'
 

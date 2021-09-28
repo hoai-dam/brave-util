@@ -1,5 +1,7 @@
-package extension;
+package brave.extension;
 
+import brave.extension.util.KafkaUtil;
+import brave.extension.util.ResourcesPathUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.producer.Producer;
@@ -7,8 +9,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import extension.util.KafkaUtil;
-import extension.util.ResourcesPathUtil;
 
 import java.io.File;
 
@@ -31,7 +31,7 @@ public class KafkaDataExtension implements BeforeEachCallback, AfterEachCallback
                     KafkaUtil.ensureTopicAvailability(adminClient, topicName);
 
                     String topicDataClassPath = ResourcesPathUtil.filePathToClassPath(topicDataFile.getPath());
-                    var kafkaEvents = KafkaUtil.loadEvents(methodLevelContext, topicDataClassPath);
+                    var kafkaEvents = KafkaUtil.loadEvents(topicDataClassPath);
 
                     for (var event : kafkaEvents) {
                         producer.send(new ProducerRecord<>(topicName, event.getKey(), event.getValue()));
