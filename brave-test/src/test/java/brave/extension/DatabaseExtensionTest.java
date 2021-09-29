@@ -1,7 +1,5 @@
 package brave.extension;
 
-import brave.extension.util.Config;
-import brave.extension.util.EnvironmentUtil;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterAll;
@@ -12,8 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import javax.sql.DataSource;
 import java.sql.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(DatabaseExtension.class)
 public class DatabaseExtensionTest {
@@ -42,9 +39,8 @@ public class DatabaseExtensionTest {
 
     }
 
-
     @Test
-    void databaseLoading_shouldBeOk(DatasourceStub datasourceStub) throws SQLException {
+    void databaseLoading_shouldBeOk(DatabaseStub datasourceStub) throws SQLException {
         datasourceStub.load("tala_acp", "stubs/databaseLoading/tala_acp");
         datasourceStub.load("talaria_seller", "stubs/databaseLoading/talaria_seller");
 
@@ -63,6 +59,23 @@ public class DatabaseExtensionTest {
                 assertTrue(resultSet.next());
                 long userId = resultSet.getLong("id");
                 assertEquals(22440L, userId);
+            }
+        }
+
+        datasourceStub.unload("tala_acp", "stubs/databaseLoading/tala_acp");
+        datasourceStub.unload("talaria_seller", "stubs/databaseLoading/talaria_seller");
+
+        try (Connection connection = talaAcp.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM tala_acp.users")) {
+                ResultSet resultSet = statement.executeQuery();
+                assertFalse(resultSet.next());
+            }
+        }
+
+        try (Connection connection = talariaSeller.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM talaria_seller.seller")) {
+                ResultSet resultSet = statement.executeQuery();
+                assertFalse(resultSet.next());
             }
         }
     }
