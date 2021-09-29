@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.File;
+import java.nio.file.Path;
 
 @Slf4j
 public class KafkaDataExtension implements BeforeEachCallback, AfterEachCallback {
@@ -42,10 +43,9 @@ public class KafkaDataExtension implements BeforeEachCallback, AfterEachCallback
     }
 
     private File[] getTopicDataFiles(ExtensionContext methodLevelContext) {
-        String testMethodStubFilePath = ResourcesPathUtil.getStubFilePathOfTestMethod(methodLevelContext);
-        String kafkaStubFilePath = testMethodStubFilePath + "/kafka";
-
-        File kafkaStubFolder = new File(kafkaStubFilePath);
+        Path testMethodStubFilePath = ResourcesPathUtil.getStubFilePathOfTestMethod(methodLevelContext);
+        Path kafkaStubFilePath = testMethodStubFilePath.resolve("kafka");
+        File kafkaStubFolder = kafkaStubFilePath.toFile();
 
         if (!kafkaStubFolder.exists() || !kafkaStubFolder.isDirectory()) {
             log.warn("kafkaStubFolder {} does not exists or is not a directory", kafkaStubFilePath);

@@ -1,7 +1,5 @@
-package wiremock;
+package brave.extension;
 
-import brave.extension.WireMockExtension;
-import brave.extension.WireMockStub;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -1,5 +1,6 @@
 package brave.extension;
 
+import brave.extension.util.Config;
 import brave.extension.util.EnvironmentUtil;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import lombok.extern.slf4j.Slf4j;
@@ -28,9 +29,8 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
  * of all above test classes ends.
  */
 @Slf4j
-public class WireMockExtension implements BeforeAllCallback, ParameterResolver, ExtensionContext.Store.CloseableResource  {
+public class WireMockExtension implements BeforeAllCallback, ParameterResolver, ExtensionContext.Store.CloseableResource {
 
-    public static final String WIREMOCK_PORT_KEY = "brave.test.wiremock.port";
     private final static AtomicBoolean wiremockStarted = new AtomicBoolean(false);
     private WireMockServer wireMockServer;
     private WireMockStub wiremockStub;
@@ -47,7 +47,7 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
                     // will be disposed too
                     .put(WireMockExtension.class.getName(), this);
 
-            int port = EnvironmentUtil.getInt(classLevelContext, WIREMOCK_PORT_KEY, 6636);
+            int port = Config.getRedisPort(classLevelContext);
             String wiremockBaseUrl = "http://localhost:" + port;
 
             wireMockServer = new WireMockServer(options().port(port));

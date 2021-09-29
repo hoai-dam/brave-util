@@ -1,6 +1,5 @@
 package brave.extension.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import net.manub.embeddedkafka.EmbeddedKafka;
 import net.manub.embeddedkafka.EmbeddedKafkaConfigImpl;
@@ -16,7 +15,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.serialization.Serdes;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.platform.commons.util.StringUtils;
 import scala.collection.immutable.HashMap;
 
 import java.io.IOException;
@@ -30,26 +28,12 @@ import static org.apache.kafka.common.serialization.Serdes.String;
 @Slf4j
 public class KafkaUtil {
 
-    private static ObjectMapper objectMapper = new ObjectMapper();
-
-    public static ObjectMapper getObjectMapper() {
-        return objectMapper;
-    }
-
-    public static String getBootstrapServers(ExtensionContext context) {
-        return "localhost:" + getBootstrapPort(context);
-    }
-
-    public static int getBootstrapPort(ExtensionContext context) {
-        return EnvironmentUtil.getInt(context, "brave.test.kafka.bootstrap.port", 9092);
-    }
-
     /**
      * Start an instance of kafka server at localhost:port,
-     * with the port obtain from {@link #getBootstrapPort(ExtensionContext)}
+     * with the port obtain from {@link Config#getKafkaBootstrapPort(ExtensionContext)}
      */
     public static void startKafkaServer(ExtensionContext context) {
-        int bootstrapPort = getBootstrapPort(context);
+        int bootstrapPort = Config.getKafkaBootstrapPort(context);
 
         EmbeddedKafka.start(new EmbeddedKafkaConfigImpl(
                 bootstrapPort,
@@ -62,10 +46,10 @@ public class KafkaUtil {
 
     /**
      * Create a kafka {@link Producer}
-     * with the bootstrap_servers obtain from {@link #getBootstrapServers(ExtensionContext)}
+     * with the bootstrap_servers obtain from {@link Config#getKafkaBootstrapServers(ExtensionContext)}
      */
     public static Producer<String, String> createProducer(ExtensionContext context) {
-        String bootstrapServers = getBootstrapServers(context);
+        String bootstrapServers = Config.getKafkaBootstrapServers(context);
         var properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -98,7 +82,7 @@ public class KafkaUtil {
     }
 
     public static AdminClient createAdminClient(ExtensionContext context) {
-        return createAdminClient(getBootstrapServers(context));
+        return createAdminClient(Config.getKafkaBootstrapServers(context));
     }
 
     public static AdminClient createAdminClient(String bootstrapServers) {
@@ -166,7 +150,7 @@ public class KafkaUtil {
      * Load all kafka events into plain text format.
      */
     public static List<Entry<String, String>> loadEvents(String resourceFile) throws IOException {
-        var objectMapper = getObjectMapper();
+        var objectMapper = Config.getObjectMapper();
         var resourceStream = KafkaUtil.class.getClassLoader().getResourceAsStream(resourceFile);
         var objectTree = objectMapper.reader().readTree(resourceStream);
 

@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static brave.extension.util.ResourcesPathUtil.PROJECT_RESOURCE_PATH;
+import static brave.extension.util.Config.PROJECT_RESOURCE_PATH;
 
 /**
  * This class allow you to load/unload stub mappings at will. Stub mappings should

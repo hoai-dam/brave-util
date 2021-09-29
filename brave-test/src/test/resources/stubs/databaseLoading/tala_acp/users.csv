@@ -1,0 +1,2 @@
+id,name,email,is_email_verified,password,is_required_change_password,change_password_at,status,remember_token,created_at,updated_at,seller_id,is_triggered,phone_number
+"20412","hoaidv","hoaidv@outlook.com","1","$2y$10$mQYlCDzTpye/8V4gawUt2eiGGpACdu2lK9ixXW6TqGo1fTgor1JIa","0",null,"1",null,"2020-03-25 15:11:03","2021-02-09 17:02:13","22556","1",null
