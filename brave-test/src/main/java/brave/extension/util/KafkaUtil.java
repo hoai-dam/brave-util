@@ -3,18 +3,20 @@ package brave.extension.util;
 import lombok.extern.slf4j.Slf4j;
 import net.manub.embeddedkafka.EmbeddedKafka;
 import net.manub.embeddedkafka.EmbeddedKafkaConfigImpl;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.clients.admin.AlterConfigOp.OpType;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.TopicPartitionInfo;
+import org.apache.kafka.common.config.ConfigResource;
+import org.apache.kafka.common.config.ConfigResource.Type;
+import org.apache.kafka.common.config.TopicConfig;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.serialization.Serdes;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import scala.collection.immutable.HashMap;
 
 import java.io.IOException;
@@ -23,33 +25,36 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.kafka.common.config.TopicConfig.RETENTION_MS_CONFIG;
 import static org.apache.kafka.common.serialization.Serdes.String;
+import static scala.jdk.CollectionConverters.MapHasAsScala;
 
 @Slf4j
 public class KafkaUtil {
 
     /**
-     * Start an instance of kafka server at localhost:port,
-     * with the port obtain from {@link Config#getKafkaBootstrapPort(ExtensionContext)}
+     * Start an instance of kafka server at localhost:port
      */
-    public static void startKafkaServer(ExtensionContext context) {
-        int bootstrapPort = Config.getKafkaBootstrapPort(context);
+    public static void startKafkaServer(int bootstrapPort) {
+        scala.collection.immutable.Map<String, String> brokerConfigs =
+                scala.collection.immutable.Map.from(MapHasAsScala(Map.of(
+                        "auto.create.topics.enable", "false",
+                        "delete.topic.enable", "true"
+                )).asScala());
 
         EmbeddedKafka.start(new EmbeddedKafkaConfigImpl(
                 bootstrapPort,
                 2181,
-                new HashMap<>(),
+                brokerConfigs,
                 new HashMap<>(),
                 new HashMap<>()
         ));
     }
 
     /**
-     * Create a kafka {@link Producer}
-     * with the bootstrap_servers obtain from {@link Config#getKafkaBootstrapServers(ExtensionContext)}
+     * Create a kafka {@link Producer}.
      */
-    public static Producer<String, String> createProducer(ExtensionContext context) {
-        String bootstrapServers = Config.getKafkaBootstrapServers(context);
+    public static Producer<String, String> createProducer(String bootstrapServers) {
         var properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -79,10 +84,6 @@ public class KafkaUtil {
                     .collect(toList());
             backOrderEventConsumer.assign(topicPartitions);
         }
-    }
-
-    public static AdminClient createAdminClient(ExtensionContext context) {
-        return createAdminClient(Config.getKafkaBootstrapServers(context));
     }
 
     public static AdminClient createAdminClient(String bootstrapServers) {
@@ -120,8 +121,7 @@ public class KafkaUtil {
      * This is intended for resetting topic for the next test.
      */
     public static void deleteTopics(AdminClient adminClient, Collection<String> topicNames) {
-        adminClient.deleteTopics(topicNames)
-                .values()
+        adminClient.deleteTopics(topicNames).values()
                 .forEach((topicName, deleteTopicFuture) -> {
                     try {
                         deleteTopicFuture.get();
@@ -130,6 +130,12 @@ public class KafkaUtil {
                         throw new IllegalStateException("Failed to delete topic: " + topicName, e);
                     }
                 });
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private static boolean topicExists(AdminClient adminClient, String topicName) {

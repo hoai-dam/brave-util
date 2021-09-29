@@ -1,7 +1,7 @@
 package gardentest;
 
-import brave.extension.KafkaDataExtension;
-import brave.extension.KafkaServerExtension;
+import brave.extension.KafkaStub;
+import brave.extension.KafkaExtension;
 import brave.extension.util.KafkaUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,8 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(classes = AppConfig.class)
 @ExtendWith({
         SpringExtension.class,
-        KafkaServerExtension.class,
-        KafkaDataExtension.class
+        KafkaExtension.class
 })
 public class GardenTest {
 
@@ -53,23 +52,41 @@ public class GardenTest {
     String kafkaBootstrapServers;
 
     @Test
-    void consumerOfGardenChanges_shouldBeActive() throws InterruptedException {
-        assertThat(gardenWatcher).isNotNull();
+    void consumerOfGardenChanges_shouldBeActive(KafkaStub kafkaStub) throws Exception {
+        // Given
+        kafkaStub.load("stubs/Garden/consumerOfGardenChanges_shouldBeActive/kafka");
+
+        // When
         boolean gardenIsFull = gardenWatcher.waitUntilGardenIsFull(Duration.ofSeconds(10));
+
+        // Then
         assertThat(gardenIsFull).isTrue();
+
+        // Cleanup
+        kafkaStub.unload("stubs/Garden/consumerOfGardenChanges_shouldBeActive/kafka");
     }
 
     @Test
-    void batchConsumerOfGardenChanges_shouldBeActive() throws InterruptedException {
-        assertThat(gardenWatcherInBatch).isNotNull();
+    void batchConsumerOfGardenChanges_shouldBeActive(KafkaStub kafkaStub) throws Exception {
+        // Given
+        kafkaStub.load("stubs/Garden/batchConsumerOfGardenChanges_shouldBeActive/kafka");
+
+        // When
         boolean gardenIsFull = gardenWatcherInBatch.waitUntilGardenIsFull(Duration.ofSeconds(10));
+
+        // Then
         assertThat(gardenIsFull).isTrue();
+
+        // Cleanup
+        kafkaStub.unload("stubs/Garden/batchConsumerOfGardenChanges_shouldBeActive/kafka");
     }
 
     @Test
-    void producerOfGardenMetrics_shouldBeActive() throws ExecutionException, InterruptedException {
-        assertThat(gardenRepo.getGardenProducer()).isNotNull();
+    void producerOfGardenMetrics_shouldBeActive(KafkaStub kafkaStub) throws Exception {
+        // Given
+        kafkaStub.load("stubs/Garden/producerOfGardenMetrics_shouldBeActive/kafka");
 
+        // When
         List<Fruit> expectedFruits = List.of(
                 gardenRepo.plant(new Seed("Apple")),
                 gardenRepo.plant(new Seed("Banana")),
@@ -89,7 +106,11 @@ public class GardenTest {
                 .map(Entry::getValue)
                 .collect(toList());
 
+        // Then
         assertThat(actualFruits).containsExactlyInAnyOrderElementsOf(expectedFruits);
+
+        // Cleanup
+        kafkaStub.unload("stubs/Garden/producerOfGardenMetrics_shouldBeActive/kafka");
     }
 
     @SuppressWarnings("SameParameterValue")

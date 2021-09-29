@@ -1,17 +1,19 @@
 package brave.extension;
 
+import brave.extension.util.Config;
 import brave.extension.util.KafkaUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.manub.embeddedkafka.EmbeddedKafka;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.*;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
-public class KafkaServerExtension implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
+public class KafkaExtension implements BeforeAllCallback, ParameterResolver, ExtensionContext.Store.CloseableResource {
 
     private final static AtomicBoolean kafkaStarted = new AtomicBoolean(false);
+
+    private KafkaStub kafkaStub;
 
     @Override
     public void beforeAll(ExtensionContext classLevelContext) {
@@ -24,9 +26,13 @@ public class KafkaServerExtension implements BeforeAllCallback, ExtensionContext
                     .getStore(ExtensionContext.Namespace.GLOBAL)
                     // And any values in this store that implements ExtensionContext.Store.CloseableResource
                     // will be disposed too
-                    .put(KafkaServerExtension.class.getName(), this);
+                    .put(KafkaExtension.class.getName(), this);
 
-            KafkaUtil.startKafkaServer(classLevelContext);
+            int bootstrapPort = Config.getKafkaBootstrapPort(classLevelContext);
+            KafkaUtil.startKafkaServer(bootstrapPort);
+
+            String bootstrapServer = Config.getKafkaBootstrapServers(classLevelContext);
+            kafkaStub = new KafkaStub(bootstrapServer);
         }
     }
 
@@ -38,5 +44,15 @@ public class KafkaServerExtension implements BeforeAllCallback, ExtensionContext
             log.warn("Stopping {}", EmbeddedKafka.class.getName());
             EmbeddedKafka.stop();
         }
+    }
+
+    @Override
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return parameterContext.getParameter().getType() == KafkaStub.class;
+    }
+
+    @Override
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return kafkaStub;
     }
 }
