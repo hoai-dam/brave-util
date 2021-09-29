@@ -33,7 +33,7 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
     public static final String WIREMOCK_PORT_KEY = "brave.test.wiremock.port";
     private final static AtomicBoolean wiremockStarted = new AtomicBoolean(false);
     private WireMockServer wireMockServer;
-    private WiremockStub wiremockStub;
+    private WireMockStub wiremockStub;
 
     @Override
     public void beforeAll(ExtensionContext classLevelContext) {
@@ -52,7 +52,7 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
 
             wireMockServer = new WireMockServer(options().port(port));
             wireMockServer.start();
-            wiremockStub = new WiremockStub(wireMockServer, wiremockBaseUrl);
+            wiremockStub = new WireMockStub(wireMockServer, wiremockBaseUrl);
         }
     }
 
@@ -67,7 +67,7 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
-        return parameterContext.getParameter().getType() == WiremockStub.class;
+        return parameterContext.getParameter().getType() == WireMockStub.class;
     }
 
     @Override

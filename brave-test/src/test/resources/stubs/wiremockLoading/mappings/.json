@@ -1,0 +1,20 @@
+{
+  "mappings": [
+    {
+      "metadata": {
+        "description": "Test if wiremock extension is working"
+      },
+      "request": {
+        "urlPath": "/greeting",
+        "method": "GET"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "bodyFileName": "greeting.html"
+      }
+    }
+  ]
+}

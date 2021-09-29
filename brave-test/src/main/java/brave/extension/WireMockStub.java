@@ -5,6 +5,7 @@ package brave.extension;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -48,20 +49,16 @@ import static brave.extension.util.ResourcesPathUtil.PROJECT_RESOURCE_PATH;
  * }</pre>
  */
 @Slf4j
-public class WiremockStub {
+public class WireMockStub {
 
     private static final String JSON_SUFFIX = ".json";
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private final WireMockServer wireMockServer;
-    private final String wireMockBaseUrl;
+    @Getter private final WireMockServer wireMockServer;
+    @Getter private final String wireMockBaseUrl;
 
-    public WiremockStub(WireMockServer wireMockServer, String wiremockBaseUrl) {
+    public WireMockStub(WireMockServer wireMockServer, String wiremockBaseUrl) {
         this.wireMockServer = wireMockServer;
         this.wireMockBaseUrl = wiremockBaseUrl;
-    }
-
-    public WireMockServer getWireMockServer() {
-        return wireMockServer;
     }
 
     public void load(String stubClassPath) throws IOException {
