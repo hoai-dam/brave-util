@@ -24,13 +24,14 @@ dependencies {
     implementation "org.slf4j:slf4j-api:1.7.30"
     implementation 'org.apache.commons:commons-collections4:4.4'
     implementation "org.apache.commons:commons-lang3:$commonLangVersion"
-    implementation 'org.apache.commons:commons-text:1.7'
+    implementation 'org.apache.commons:commons-text:1.9'
 
     compileOnly "org.projectlombok:lombok:$lombokVersion"
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
     testCompileOnly "org.projectlombok:lombok:$lombokVersion"
     testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
 
+    testImplementation "org.apache.kafka:kafka_2.13:$kafkaClientsVersion"
     testImplementation project(":brave-test")
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'

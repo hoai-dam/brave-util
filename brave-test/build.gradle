@@ -10,7 +10,6 @@ repositories {
 }
 
 dependencies {
-    implementation "org.apache.kafka:kafka-clients:${kafkaClientsVersion}"
     implementation "io.github.embeddedkafka:embedded-kafka_2.13:$kafkaClientsVersion"
     implementation 'it.ozimov:embedded-redis:0.7.3'
     implementation "com.github.tomakehurst:wiremock-jre8:2.27.2"

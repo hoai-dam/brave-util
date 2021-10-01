@@ -12,7 +12,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import redis.embedded.RedisServer;
 
 import java.util.List;
 import java.util.Map;
@@ -37,26 +36,38 @@ public class GardenTest {
         Fruit banana = gardenRepo.plantSingle(new Seed("banana"));
         System.err.printf("2. Got %s\n", banana);
 
-        Map<Seed, Fruit> flowers = gardenRepo.plantMulti(List.of(new Seed("apple"), new Seed("orange")));
-        System.err.printf("3. Got %s\n", Map.copyOf(flowers));
+    }
 
-        apple = gardenRepo.plantSingle(new Seed("apple"));
-        System.err.printf("4. Got %s\n", apple);
+    @Test
+    void cachingMultiWithRedis_shouldBeOk() {
+        GardenRepo gardenRepo = context.getBean(GardenRepo.class);
+
+        Map<Seed, Fruit> flowers = gardenRepo.plantMulti(List.of(new Seed("apple"), new Seed("orange"), new Seed("watermelon")));
+        System.err.printf("1. Got %s\n", Map.copyOf(flowers));
+    }
+
+    @Test
+    void cacheInvalidatorWithRedis_shouldBeOk() {
+        GardenRepo gardenRepo = context.getBean(GardenRepo.class);
+
+        Fruit apple = gardenRepo.plantSingle(new Seed("apple"));
+        System.err.printf("1. Got %s\n", apple);
 
         Fruit orange = gardenRepo.plantSingle(new Seed("orange"));
-        System.err.printf("5. Got %s\n", orange);
+        System.err.printf("2. Got %s\n", orange);
 
         GardenInvalidator gardenInvalidator = context.getBean(GardenInvalidator.class);
         gardenInvalidator.uproot(new Seed("apple"));
         apple = gardenRepo.plantSingle(new Seed("apple"));
-        System.err.printf("6. Got %s\n", apple);
+        System.err.printf("3. Got %s\n", apple);
 
         gardenInvalidator.refresh(new Seed("orange"));
         orange = gardenRepo.plantSingle(new Seed("orange"));
-        System.err.printf("7. Got %s\n", orange);
+        System.err.printf("4. Got %s\n", orange);
 
         gardenInvalidator.refresh(new Seed("kiwi"));
         orange = gardenRepo.plantSingle(new Seed("kiwi"));
-        System.err.printf("8. Got %s\n", orange);
+        System.err.printf("5. Got %s\n", orange);
     }
+
 }

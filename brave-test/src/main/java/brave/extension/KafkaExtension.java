@@ -2,8 +2,9 @@ package brave.extension;
 
 import brave.extension.util.Config;
 import brave.extension.util.KafkaUtil;
+import io.github.embeddedkafka.EmbeddedKafka;
 import lombok.extern.slf4j.Slf4j;
-import net.manub.embeddedkafka.EmbeddedKafka;
+//import net.manub.embeddedkafka.EmbeddedKafka;
 import org.junit.jupiter.api.extension.*;
 
 import java.util.concurrent.atomic.AtomicBoolean;

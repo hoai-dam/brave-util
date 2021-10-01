@@ -1,20 +1,19 @@
 package brave.extension.util;
 
+import io.github.embeddedkafka.EmbeddedKafka;
+import io.github.embeddedkafka.EmbeddedKafkaConfigImpl;
 import lombok.extern.slf4j.Slf4j;
-import net.manub.embeddedkafka.EmbeddedKafka;
-import net.manub.embeddedkafka.EmbeddedKafkaConfigImpl;
-import org.apache.kafka.clients.admin.*;
-import org.apache.kafka.clients.admin.AlterConfigOp.OpType;
+//import net.manub.embeddedkafka.EmbeddedKafka;
+//import net.manub.embeddedkafka.EmbeddedKafkaConfigImpl;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.TopicPartitionInfo;
-import org.apache.kafka.common.config.ConfigResource;
-import org.apache.kafka.common.config.ConfigResource.Type;
-import org.apache.kafka.common.config.TopicConfig;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.serialization.Serdes;
 import scala.collection.immutable.HashMap;
@@ -25,7 +24,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.kafka.common.config.TopicConfig.RETENTION_MS_CONFIG;
 import static org.apache.kafka.common.serialization.Serdes.String;
 import static scala.jdk.CollectionConverters.MapHasAsScala;
 
