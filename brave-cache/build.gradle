@@ -15,20 +15,20 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
-    implementation "org.apache.commons:commons-lang3:$commonLangVersion"
+    implementation "org.apache.commons:commons-lang3"
 
     implementation "org.cache2k:cache2k-api:$cache2kVersion"
     runtimeOnly "org.cache2k:cache2k-core:$cache2kVersion"
-    implementation "io.lettuce:lettuce-core:$lettuceVersion"
+    implementation "io.lettuce:lettuce-core"
 
-    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-    implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-databind"
+    implementation "com.fasterxml.jackson.core:jackson-core"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
 
-    compileOnly "org.projectlombok:lombok:$lombokVersion"
-    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-    testCompileOnly "org.projectlombok:lombok:$lombokVersion"
-    testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    implementation "org.projectlombok:lombok"
+    annotationProcessor "org.projectlombok:lombok"
+    testImplementation "org.projectlombok:lombok"
+    testAnnotationProcessor "org.projectlombok:lombok"
 
     testImplementation 'it.ozimov:embedded-redis:0.7.3'
     testImplementation project(':brave-test')
