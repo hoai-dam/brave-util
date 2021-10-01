@@ -5,6 +5,7 @@ import brave.cache.codec.Codec;
 import brave.cache.util.CollectionUtil;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisException;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +56,12 @@ public class RedisCache<K, V> implements Cache<K, V>, AutoCloseable{
 
     @Override
     public V load(K key) {
-        V value = syncCommands().get(key);
+        V value = null;
+        try {
+            value = syncCommands().get(key);
+        } catch (RedisException reex) {
+            log.error("Failed to execute redis 'get' {}", key, reex);
+        }
         if (value != null) return value;
         return loadAndCache(key);
     }
@@ -68,16 +74,24 @@ public class RedisCache<K, V> implements Cache<K, V>, AutoCloseable{
 
     @Override
     public Map<K, V> loadAll(K[] keys) {
-        HashMap<K, V> keyValues = new HashMap<>();
-        List<K> missingKeys = new ArrayList<>();
+        HashMap<K, V> keyValues;
+        List<K> missingKeys;
 
-        for (KeyValue<K, V> kv : syncCommands().mget(keys)) {
-            K k = kv.getKey();
-            if (kv.hasValue()) {
-                keyValues.put(k, kv.getValue());
-            } else {
-                missingKeys.add(k);
+        try {
+            keyValues = new HashMap<>();
+            missingKeys = new ArrayList<>();
+            for (KeyValue<K, V> kv : syncCommands().mget(keys)) {
+                K k = kv.getKey();
+                if (kv.hasValue()) {
+                    keyValues.put(k, kv.getValue());
+                } else {
+                    missingKeys.add(k);
+                }
             }
+        } catch (RedisException reex) {
+            log.error("Failed to execute redis 'mget' {} keys", keys.length, reex);
+            keyValues = new HashMap<>();
+            missingKeys = Arrays.asList(keys);
         }
 
         if (missingKeys.size() > 0) {
@@ -89,7 +103,14 @@ public class RedisCache<K, V> implements Cache<K, V>, AutoCloseable{
 
     @Override
     public V reloadIfExist(K key) {
-        V value = syncCommands().get(key);
+        V value = null;
+
+        try {
+            value = syncCommands().get(key);
+        } catch (RedisException reex) {
+            log.error("Failed to execute redis 'get' {}", key, reex);
+        }
+
         if (value != null) return loadAndCache(key);
         return null;
     }
@@ -108,8 +129,12 @@ public class RedisCache<K, V> implements Cache<K, V>, AutoCloseable{
         if (multiLoader == null) return emptyMap();
         Map<K, V> keyValues = multiLoader.loadAll(missingKeys);
 
-        for (var kv : keyValues.entrySet()) {
-            syncCommands().psetex(kv.getKey(), defaultTimeToLiveMillis, kv.getValue());
+        try {
+            for (var kv : keyValues.entrySet()) {
+                syncCommands().psetex(kv.getKey(), defaultTimeToLiveMillis, kv.getValue());
+            }
+        } catch (RedisException reex) {
+            log.error("Failed to execute redis 'psetex' {} keys", missingKeys.size(), reex);
         }
 
         return keyValues;
@@ -132,26 +157,45 @@ public class RedisCache<K, V> implements Cache<K, V>, AutoCloseable{
     }
 
     private boolean putTimeToLiveMillis(K key, V value, long timeToLiveMillis) {
-        String reply = syncCommands().psetex(key, timeToLiveMillis, value);
-        if ("OK".equals(reply)) return true;
-        log.warn("Failed to put key {}: {}", key, reply);
+        try {
+            String reply = syncCommands().psetex(key, timeToLiveMillis, value);
+            if ("OK".equals(reply)) return true;
+            log.warn("Failed to execute redis 'psetex' {}: {}", key, reply);
+        } catch (RedisException reex) {
+            log.error("Failed to execute redis 'psetex' {}", key, reex);
+        }
         return false;
     }
 
     @Override
     public boolean expireAt(K key, long timestamp) {
-        return syncCommands().expireat(key, timestamp);
+        try {
+            return syncCommands().expireat(key, timestamp);
+        }  catch (RedisException reex) {
+            log.error("Failed to execute redis 'expireat' {}", key, reex);
+            return false;
+        }
     }
 
     @Override
     public final long remove(K[] keys) {
-        return syncCommands().del(keys);
+        try {
+            return syncCommands().del(keys);
+        } catch (RedisException reex) {
+            log.error("Failed to execute redis 'del' {} keys", keys.length, reex);
+            return 0L;
+        }
     }
 
     @Override
     public boolean remove(K key) {
-        //noinspection unchecked
-        return syncCommands().del(key) == 1;
+        try {
+            //noinspection unchecked
+            return syncCommands().del(key) == 1;
+        } catch (RedisException reex) {
+            log.error("Failed to execute redis 'del' {}", key, reex);
+            return false;
+        }
     }
 
     @Override

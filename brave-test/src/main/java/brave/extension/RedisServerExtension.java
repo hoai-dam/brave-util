@@ -1,8 +1,7 @@
 package brave.extension;
 
 import brave.extension.util.EnvironmentUtil;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.*;
 import redis.embedded.RedisServer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -17,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Then stop the {@link RedisServer} instance when the <b>root</b> {@link ExtensionContext}
  * of all above test classes ends.
  */
-public class RedisServerExtension implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
+public class RedisServerExtension implements BeforeAllCallback, ParameterResolver, ExtensionContext.Store.CloseableResource {
 
     private final static AtomicBoolean redisStarted = new AtomicBoolean(false);
 
@@ -59,5 +58,15 @@ public class RedisServerExtension implements BeforeAllCallback, ExtensionContext
             System.err.printf("Stopping %s\n", RedisServer.class.getName());
             redisServer.stop();
         }
+    }
+
+    @Override
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return parameterContext.getParameter().getType() == RedisServer.class;
+    }
+
+    @Override
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return redisServer;
     }
 }
