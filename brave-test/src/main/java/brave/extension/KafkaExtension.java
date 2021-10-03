@@ -34,6 +34,7 @@ public class KafkaExtension implements BeforeAllCallback, ParameterResolver, Ext
 
             String bootstrapServer = Config.getKafkaBootstrapServers(classLevelContext);
             kafkaStub = new KafkaStub(bootstrapServer);
+            BraveTestContext.setKafkaStub(kafkaStub);
         }
     }
 
@@ -44,6 +45,7 @@ public class KafkaExtension implements BeforeAllCallback, ParameterResolver, Ext
             // we stop the EmbeddedKafka
             log.warn("Stopping {}", EmbeddedKafka.class.getName());
             EmbeddedKafka.stop();
+            BraveTestContext.setKafkaStub(null);
         }
     }
 

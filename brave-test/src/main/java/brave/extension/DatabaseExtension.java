@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DatabaseExtension implements BeforeAllCallback, ParameterResolver {
 
     private final static AtomicBoolean schemaInitialized = new AtomicBoolean(false);
-    private DatabaseStub databaseDataExtension;
+    private DatabaseStub databaseStub;
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
@@ -47,7 +47,8 @@ public class DatabaseExtension implements BeforeAllCallback, ParameterResolver {
                 datasources.put(datasourceName, dataSource);
             }
 
-            databaseDataExtension = new DatabaseStub(datasources);
+            databaseStub = new DatabaseStub(datasources);
+            BraveTestContext.setDatabaseStub(databaseStub);
         }
     }
 
@@ -79,6 +80,6 @@ public class DatabaseExtension implements BeforeAllCallback, ParameterResolver {
 
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
-        return databaseDataExtension;
+        return databaseStub;
     }
 }

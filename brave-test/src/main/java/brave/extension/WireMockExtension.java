@@ -53,6 +53,7 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
             wireMockServer = new WireMockServer(options().port(port));
             wireMockServer.start();
             wiremockStub = new WireMockStub(wireMockServer, wiremockBaseUrl);
+            BraveTestContext.setWireMockStub(wiremockStub);
         }
     }
 
@@ -62,6 +63,7 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
             log.warn("Stopping {}", WireMockServer.class.getName());
             wireMockServer.stop();
             wireMockServer = null;
+            BraveTestContext.setWireMockStub(null);
         }
     }
 

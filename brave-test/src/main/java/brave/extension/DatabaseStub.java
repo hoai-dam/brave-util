@@ -36,8 +36,6 @@ public class DatabaseStub {
         }
 
         File dataFolder = getDataFolder(dataFolderClassPath);
-        if (dataFolder == null) return;
-
         try (Connection connection = dataSource.getConnection()) {
             prepareDatabaseForTest(dataFolder, connection);
         }
@@ -72,7 +70,7 @@ public class DatabaseStub {
         Arrays.sort(tableFiles, Comparator.comparing(File::getName));
 
         for (var tableDataFile : tableFiles) {
-            var tableName = tableDataFileNameToTableName(tableDataFile.getName(), CSV_SUFFIX);
+            var tableName = fileNameToTableName(tableDataFile.getName(), CSV_SUFFIX);
             var tableFullName = schemaName + "." + tableName;
 
             String csvDataClassPath = ResourcesPathUtil.filePathToClassPath(tableDataFile.getPath());
@@ -86,7 +84,7 @@ public class DatabaseStub {
         Arrays.sort(tableFiles, Comparator.comparing(File::getName));
 
         for (var tableDataFile : tableFiles) {
-            var tableName = tableDataFileNameToTableName(tableDataFile.getName(), CSV_SUFFIX);
+            var tableName = fileNameToTableName(tableDataFile.getName(), CSV_SUFFIX);
             var tableFullName = schemaName + "." + tableName;
 
             clearTable(tableFullName, connection);
@@ -110,7 +108,7 @@ public class DatabaseStub {
     }
 
     @SuppressWarnings("SameParameterValue")
-    static String tableDataFileNameToTableName(String original, String ending) {
+    static String fileNameToTableName(String original, String ending) {
         final int firstDot = original.indexOf(".");
         if (firstDot >= 0) {
             try {
