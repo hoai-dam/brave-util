@@ -4,6 +4,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Home of all stubbing facilities.
+ */
 public class BraveTestContext {
 
     @Getter
