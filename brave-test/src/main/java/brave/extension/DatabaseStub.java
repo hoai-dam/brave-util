@@ -57,11 +57,7 @@ public class DatabaseStub {
 
     private File getDataFolder(String dataFolderClassPath) {
         Path dataFolderPath = ResourcesPathUtil.classPathToFilePath(dataFolderClassPath);
-        File dataFolder = dataFolderPath.toFile();
-        if (!dataFolder.exists() || !dataFolder.isDirectory()) {
-            throw new IllegalArgumentException("dataFolder '" + dataFolderClassPath + "' is not valid");
-        }
-        return dataFolder;
+        return dataFolderPath.toFile();
     }
 
     static void prepareDatabaseForTest(File dataFolder, Connection connection) throws SQLException {
@@ -96,7 +92,12 @@ public class DatabaseStub {
             throw new IllegalArgumentException("Schema data folder should not be null");
         }
 
-        if (!dataFolder.exists() || !dataFolder.isDirectory()) {
+        if (!dataFolder.exists()) {
+            log.warn("'" + dataFolder + "' should be a folder");
+            return new File[0];
+        }
+
+        if (!dataFolder.isDirectory()) {
             throw new IllegalArgumentException("'" + dataFolder + "' should be a folder");
         }
 
