@@ -160,9 +160,9 @@ public class ReactiveRedisCache<K, V> implements ReactiveCache<K, V>, AutoClosea
     }
 
     @Override
-    public Mono<Boolean> expireAt(K key, long timestamp) {
+    public Mono<Boolean> expireAt(K key, long timestampMillis) {
         return reactive()
-                .expireat(key, timestamp)
+                .expireat(key, timestampMillis / 1000)
                 .onErrorResume(RedisException.class, reex -> {
                     log.error("Failed to execute redis 'expireat' {}", key, reex);
                     return Mono.just(false);

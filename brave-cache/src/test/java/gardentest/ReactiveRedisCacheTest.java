@@ -8,7 +8,8 @@ import garden.FruitCodec;
 import garden.Seed;
 import garden.SeedCodec;
 import io.lettuce.core.RedisClient;
-import org.junit.jupiter.api.AfterEach;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Slf4j
 @SpringBootTest(classes = AppConfig.class)
 @ExtendWith({SpringExtension.class, RedisServerExtension.class})
 public class ReactiveRedisCacheTest {
@@ -58,6 +60,7 @@ public class ReactiveRedisCacheTest {
     }
 
     Mono<Fruit> load(Seed seed) {
+        log.warn("Loading {}", seed);
         Integer generation;
         if ((generation = volatileFruits.get(seed)) != null) {
             volatileFruits.put(seed, generation + 1);
@@ -71,6 +74,7 @@ public class ReactiveRedisCacheTest {
     }
 
     Flux<Tuple<Seed, Fruit>> loadMany(Collection<Seed> seeds) {
+        log.warn("Loading {} seeds: {}", seeds.size(), seeds);
         return Flux.fromIterable(seeds).map(seed -> {
             Integer generation;
             if ((generation = volatileFruits.get(seed)) != null) {
@@ -84,9 +88,12 @@ public class ReactiveRedisCacheTest {
         });
     }
 
-    @AfterEach
-    void afterEach() {
-
+    @AfterAll
+    static void afterAll() {
+        ReactiveRedisCache<Seed, Fruit> capturedCache = cache;
+        if (capturedCache != null) {
+            capturedCache.close();
+        }
     }
 
     @Test
@@ -116,15 +123,19 @@ public class ReactiveRedisCacheTest {
         Seed elderberry = new Seed("elderberry");
         Seed hackberry = new Seed("hackberry");
 
-        StepVerifier.create(cache.put(lemon, new Fruit(lemon))).expectNext(true).verifyComplete();
-        StepVerifier.create(cache.put(clementine, new Fruit(clementine))).expectNext(true).verifyComplete();
-        StepVerifier.create(cache.put(apricots, new Fruit(apricots))).expectNext(true).verifyComplete();
-        StepVerifier.create(cache.put(elderberry, new Fruit(elderberry))).expectNext(true).verifyComplete();
+        // Given
+        for (Seed seed : List.of(lemon, clementine, apricots, elderberry)) {
+            StepVerifier.create(cache.put(seed, new Fruit(seed)))
+                    .expectNext(true)
+                    .verifyComplete();
+        }
 
         List<Seed> keys = List.of(lemon, clementine, apricots, elderberry, hackberry);
 
+        // When
         StepVerifier.create(cache.peekAll(keys))
                 .assertNext(result -> {
+                    // Then
                     assertThat(result.keySet()).containsExactlyInAnyOrderElementsOf(keys);
                     assertThat(result.get(hackberry)).isNull();
                 })
@@ -353,8 +364,8 @@ public class ReactiveRedisCacheTest {
                 .verifyComplete();
 
         // When
-        long expireAtTimestampSeconds = System.currentTimeMillis() / 1000 + 1;
-        StepVerifier.create(cache.expireAt(fingerLimeSeed, expireAtTimestampSeconds))
+        long expireAtTimestamp = System.currentTimeMillis() + 1000;
+        StepVerifier.create(cache.expireAt(fingerLimeSeed, expireAtTimestamp))
                 .expectNext(true)
                 .verifyComplete();
 

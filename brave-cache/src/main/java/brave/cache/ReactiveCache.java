@@ -47,10 +47,10 @@ public interface ReactiveCache<K, V> {
      * The timestamp is the difference in milliseconds between NOW and <code>Jan 1st, 1970UTC</code>.
      * <br>
      * @param key The key
-     * @param timestamp The expiry timestamp
+     * @param timestampMillis The expiry timestamp
      * @return Success or Failure
      */
-    Mono<Boolean> expireAt(K key, long timestamp);
+    Mono<Boolean> expireAt(K key, long timestampMillis);
 
     static <K, V> Cache<K, V> fromContext(CacheableContext cacheableContext) {
         return cacheableContext.getCache();
