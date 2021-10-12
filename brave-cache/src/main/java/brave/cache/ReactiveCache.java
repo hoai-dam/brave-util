@@ -38,7 +38,7 @@ public interface ReactiveCache<K, V> {
      */
     Mono<Boolean> put(K key, V value, long expireAtTimestamp);
 
-    Mono<Long> remove(K[] key);
+    Mono<Long> remove(K[] keys);
 
     Mono<Boolean> remove(K key);
 
