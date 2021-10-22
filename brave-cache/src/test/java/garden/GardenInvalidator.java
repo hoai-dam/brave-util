@@ -18,15 +18,16 @@ public class GardenInvalidator {
 
     public void uproot(Seed flowerSeed) {
         if (cache != null) {
-            System.err.printf("\n>>>>>>>> Uprooting %s\n", flowerSeed);
-            cache.remove(flowerSeed);
+            if (cache.remove(flowerSeed)) {
+                System.err.printf("\n>>>>>>>> Uprooted %s\n", flowerSeed);
+            }
         }
     }
 
     public void refresh(Seed flowerSeed) {
         if (cache != null) {
-            System.err.printf("\n>>>>>>>> Refreshing %s\n", flowerSeed);
-            cache.reloadIfExist(flowerSeed);
+            Fruit freshFruit = cache.reloadIfExist(flowerSeed);
+            System.err.printf("\n>>>>>>>> Refreshed %s and got %s\n", flowerSeed, freshFruit);
         }
     }
 }
