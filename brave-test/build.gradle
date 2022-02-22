@@ -31,7 +31,6 @@ dependencies {
 
     testImplementation 'io.rest-assured:rest-assured:4.4.0'
     testImplementation 'io.rest-assured:json-path:4.4.0'
-    testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 }
 
 configurations {
