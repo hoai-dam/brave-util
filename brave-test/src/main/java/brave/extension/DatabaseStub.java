@@ -2,9 +2,18 @@ package brave.extension;
 
 import brave.extension.util.ResourcesPathUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.jdbc.ScriptRunner;
+import org.apache.ibatis.mapping.Environment;
+import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 
 import javax.sql.DataSource;
 import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -25,6 +34,37 @@ public class DatabaseStub {
 
     public DatabaseStub(Map<String, DataSource> datasources) {
         this.datasources = datasources;
+    }
+
+    public void run(String dataSourceName, String scriptClassPath) throws SQLException, IOException {
+        log.warn("Running script {} for data source {}", scriptClassPath, dataSourceName);
+        DataSource dataSource = datasources.get(dataSourceName);
+        if (dataSource != null) {
+            run(dataSource, scriptClassPath);
+        } else {
+            throw new IllegalArgumentException("Data source '" + dataSourceName + "' not found");
+        }
+    }
+
+    private void run(DataSource dataSource, String scriptFile) throws SQLException, IOException {
+        SqlSessionFactory factory = getSqlSessionFactory(dataSource);
+
+        try (var session = factory.openSession()) {
+            try (var connection = session.getConnection()) {
+                var sqlRunner = new ScriptRunner(connection);
+
+                try (Reader scriptReader = Resources.getResourceAsReader(scriptFile)) {
+                    sqlRunner.runScript(scriptReader);
+                }
+            }
+        }
+    }
+
+    private SqlSessionFactory getSqlSessionFactory(DataSource dataSource) {
+        Configuration mybatisConfig = new Configuration();
+        Environment mybatisEnvironment = new Environment("test", new JdbcTransactionFactory(), dataSource);
+        mybatisConfig.setEnvironment(mybatisEnvironment);
+        return new SqlSessionFactoryBuilder().build(mybatisConfig);
     }
 
     public void load(String datasourceName, String dataFolderClassPath) throws SQLException {

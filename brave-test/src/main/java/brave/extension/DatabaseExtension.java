@@ -40,37 +40,18 @@ public class DatabaseExtension implements BeforeAllCallback, ParameterResolver {
             String[] datasourceNames =  EnvironmentUtil.getString(context, Config.Key.DATASOURCES).split(",");
             for (String datasourceName : datasourceNames) {
                 HikariConfig config = Config.getDatasource(context, datasourceName);
-                DataSource dataSource = new HikariDataSource(config);
-                String scriptClassPath = Config.getScript(context, datasourceName);
-
-                initiateSchemaForDataSource(scriptClassPath, dataSource);
-                datasources.put(datasourceName, dataSource);
+                datasources.put(datasourceName, new HikariDataSource(config));
             }
 
             databaseStub = new DatabaseStub(datasources);
+
+            for (String datasourceName : datasourceNames) {
+                String scriptClassPath = Config.getScript(context, datasourceName);
+                databaseStub.run(datasourceName, scriptClassPath);
+            }
+
             BraveTestContext.setDatabaseStub(databaseStub);
         }
-    }
-
-    private void initiateSchemaForDataSource(String scriptFile, DataSource dataSource) throws SQLException, IOException {
-        SqlSessionFactory factory = getSqlSessionFactory(dataSource);
-
-        try (var session = factory.openSession()) {
-            try (var connection = session.getConnection()) {
-                var sqlRunner = new ScriptRunner(connection);
-
-                try (Reader scriptReader = Resources.getResourceAsReader(scriptFile)) {
-                    sqlRunner.runScript(scriptReader);
-                }
-            }
-        }
-    }
-
-    private SqlSessionFactory getSqlSessionFactory(DataSource dataSource) {
-        Configuration mybatisConfig = new Configuration();
-        Environment mybatisEnvironment = new Environment("test", new JdbcTransactionFactory(), dataSource);
-        mybatisConfig.setEnvironment(mybatisEnvironment);
-        return new SqlSessionFactoryBuilder().build(mybatisConfig);
     }
 
     @Override
