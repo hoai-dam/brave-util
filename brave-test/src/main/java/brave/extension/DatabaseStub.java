@@ -9,17 +9,16 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Map;
+import java.sql.*;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -178,4 +177,51 @@ public class DatabaseStub {
         }
     }
 
+    public List<HashMap<String, Object>> queryToList(String dataSourceName, String sqlQuery) throws SQLException {
+        DataSource dataSource = datasources.get(dataSourceName);
+        if (dataSource != null) {
+            return query(dataSource, sqlQuery);
+        } else {
+            throw new IllegalArgumentException("Data source '" + dataSourceName + "' not found");
+        }
+    }
+
+    private List<HashMap<String, Object>> query(DataSource dataSource, String sqlQuery) throws SQLException {
+        SqlSessionFactory factory = getSqlSessionFactory(dataSource);
+
+        try (var session = factory.openSession()) {
+            try (var connection= session.getConnection()) {
+                try (PreparedStatement statement = connection.prepareStatement(sqlQuery)) {
+                    ResultSet resultSet = statement.executeQuery();
+                    if (resultSet == null) {
+                        return new ArrayList<>();
+                    }
+                    return rsToList(resultSet);
+                }
+            }
+        }
+    }
+
+    private static List<HashMap<String, Object>> rsToList(ResultSet rs) throws SQLException, JSONException {
+        ResultSetMetaData md = rs.getMetaData();
+        int columns = md.getColumnCount();
+        List<HashMap<String, Object>> results = new ArrayList<>();
+
+        while (rs.next()) {
+            HashMap<String, Object> row = new HashMap<>();
+            for (int i = 1; i <= columns; i++) {
+                String property = md.getColumnLabel(i);
+                Object value = rs.getObject(i);
+
+                if (value instanceof byte[]) {
+                    String valueToStr = new String((byte[]) value);
+                    value = new JSONObject(valueToStr);
+                }
+                row.put(property, value);
+            }
+            results.add(row);
+        }
+
+        return results;
+    }
 }
