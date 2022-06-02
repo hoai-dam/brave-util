@@ -9,8 +9,6 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import javax.sql.DataSource;
 import java.io.File;
@@ -186,6 +184,21 @@ public class DatabaseStub {
         }
     }
 
+    public HashMap<String, Object> findFirstById(String dataSourceName, String table, String id) throws SQLException {
+        DataSource dataSource = datasources.get(dataSourceName);
+        String sqlQuery = format("SELECT * FROM %s WHERE id = '%s'", table, id);
+        if (dataSource != null) {
+            List<HashMap<String, Object>> resultList = query(dataSource, sqlQuery);
+            if (!resultList.isEmpty()) {
+                return resultList.get(0);
+            }
+        } else {
+            throw new IllegalArgumentException("Data source '" + dataSourceName + "' not found");
+        }
+
+        return null;
+    }
+
     private List<HashMap<String, Object>> query(DataSource dataSource, String sqlQuery) throws SQLException {
         SqlSessionFactory factory = getSqlSessionFactory(dataSource);
 
@@ -202,7 +215,7 @@ public class DatabaseStub {
         }
     }
 
-    private static List<HashMap<String, Object>> rsToList(ResultSet rs) throws SQLException, JSONException {
+    private static List<HashMap<String, Object>> rsToList(ResultSet rs) throws SQLException {
         ResultSetMetaData md = rs.getMetaData();
         int columns = md.getColumnCount();
         List<HashMap<String, Object>> results = new ArrayList<>();
@@ -212,11 +225,6 @@ public class DatabaseStub {
             for (int i = 1; i <= columns; i++) {
                 String property = md.getColumnLabel(i);
                 Object value = rs.getObject(i);
-
-                if (value instanceof byte[]) {
-                    String valueToStr = new String((byte[]) value);
-                    value = new JSONObject(valueToStr);
-                }
                 row.put(property, value);
             }
             results.add(row);

@@ -5,10 +5,7 @@ import io.github.embeddedkafka.EmbeddedKafkaConfigImpl;
 import lombok.extern.slf4j.Slf4j;
 //import net.manub.embeddedkafka.EmbeddedKafka;
 //import net.manub.embeddedkafka.EmbeddedKafkaConfigImpl;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.DeleteTopicsResult;
-import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -120,7 +117,7 @@ public class KafkaUtil {
      * This is intended for resetting topic for the next test.
      */
     public static void deleteTopics(AdminClient adminClient, Collection<String> topicNames) {
-        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(topicNames);
+        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(topicNames, new DeleteTopicsOptions().timeoutMs(10 * 1000));
 
         while (!deleteTopicsResult.all().isDone()) {
         }
@@ -160,27 +157,14 @@ public class KafkaUtil {
         return kafkaEvents;
     }
 
-    /*
-    * consume a number of event from
-    * */
-    public static List<ConsumerRecord<String, String>> consumeEvents(Consumer<String, String> consumer, int eventCount) throws InterruptedException {
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        CountDownLatch counter = new CountDownLatch(eventCount);
-        List<ConsumerRecord<String, String>> result = new LinkedList<>();
-        executorService.execute(() -> {
-            while (counter.getCount() > 0) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
-                for (var record : records) {
-                    result.add(record);
-                    counter.countDown();
-                }
-            }
-        });
+    /**
+     * Delete consumer groups from Kafka.
+     */
+    public static void deleteConsumerGroups(AdminClient adminClient, Collection<String> topicNames) {
+        DeleteConsumerGroupsResult deleteConsumerGroupsResult = adminClient.deleteConsumerGroups(topicNames
+                , new DeleteConsumerGroupsOptions().timeoutMs(10 * 1000));
 
-        //noinspection ResultOfMethodCallIgnored
-        counter.await(30, TimeUnit.SECONDS);
-        executorService.shutdownNow();
-        log.info("event {}", result);
-        return result;
+        while (!deleteConsumerGroupsResult.all().isDone()) {
+        }
     }
 }

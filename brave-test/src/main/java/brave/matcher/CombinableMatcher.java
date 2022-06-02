@@ -15,6 +15,8 @@ public class CombinableMatcher<T> extends BaseMatcher<T> implements Matcher<T> {
         matchers.add(matcher);
     }
 
+    protected CombinableMatcher() { }
+
     public static <T> CombinableMatcher<T> allOf(final Matcher<? super T> matcher) {
         return new CombinableMatcher<>(matcher);
     }
