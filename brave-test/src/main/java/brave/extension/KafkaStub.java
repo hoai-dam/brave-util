@@ -186,6 +186,8 @@ public class KafkaStub {
     public List<ConsumerRecord<String, String>> consumeEvents(final List<String> topics, final int eventCount) throws InterruptedException {
         final String tempConsumerGroupId = String.format("temp-consumer-group-%d", numberOfTempConsumerGroups);
         Consumer<String, String> consumer = KafkaUtil.createConsumer(bootstrapServers, tempConsumerGroupId);
+        if (numberOfTempConsumerGroups >= Integer.MAX_VALUE)
+            throw new InterruptedException("Too many temporary consumer groups are created.");
         numberOfTempConsumerGroups++;
         consumer.subscribe(topics);
 
