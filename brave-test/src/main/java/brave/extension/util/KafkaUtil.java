@@ -5,11 +5,8 @@ import io.github.embeddedkafka.EmbeddedKafkaConfigImpl;
 import lombok.extern.slf4j.Slf4j;
 //import net.manub.embeddedkafka.EmbeddedKafka;
 //import net.manub.embeddedkafka.EmbeddedKafkaConfigImpl;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -19,9 +16,10 @@ import org.apache.kafka.common.serialization.Serdes;
 import scala.collection.immutable.HashMap;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.kafka.common.serialization.Serdes.String;
@@ -119,20 +117,9 @@ public class KafkaUtil {
      * This is intended for resetting topic for the next test.
      */
     public static void deleteTopics(AdminClient adminClient, Collection<String> topicNames) {
-        adminClient.deleteTopics(topicNames).values()
-                .forEach((topicName, deleteTopicFuture) -> {
-                    try {
-                        deleteTopicFuture.get();
-                        log.warn("Deleted topic " + topicName);
-                    } catch (Throwable e) {
-                        throw new IllegalStateException("Failed to delete topic: " + topicName, e);
-                    }
-                });
+        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(topicNames, new DeleteTopicsOptions().timeoutMs(10 * 1000));
 
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        while (!deleteTopicsResult.all().isDone()) {
         }
     }
 
@@ -168,5 +155,16 @@ public class KafkaUtil {
         }
 
         return kafkaEvents;
+    }
+
+    /**
+     * Delete consumer groups from Kafka.
+     */
+    public static void deleteConsumerGroups(AdminClient adminClient, Collection<String> topicNames) {
+        DeleteConsumerGroupsResult deleteConsumerGroupsResult = adminClient.deleteConsumerGroups(topicNames
+                , new DeleteConsumerGroupsOptions().timeoutMs(10 * 1000));
+
+        while (!deleteConsumerGroupsResult.all().isDone()) {
+        }
     }
 }

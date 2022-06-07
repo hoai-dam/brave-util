@@ -15,11 +15,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Map;
+import java.sql.*;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -178,4 +175,61 @@ public class DatabaseStub {
         }
     }
 
+    public List<HashMap<String, Object>> queryToList(String dataSourceName, String sqlQuery) throws SQLException {
+        DataSource dataSource = datasources.get(dataSourceName);
+        if (dataSource != null) {
+            return query(dataSource, sqlQuery);
+        } else {
+            throw new IllegalArgumentException("Data source '" + dataSourceName + "' not found");
+        }
+    }
+
+    public HashMap<String, Object> findFirstById(String dataSourceName, String table, String id) throws SQLException {
+        DataSource dataSource = datasources.get(dataSourceName);
+        String sqlQuery = format("SELECT * FROM %s WHERE id = '%s'", table, id);
+        if (dataSource != null) {
+            List<HashMap<String, Object>> resultList = query(dataSource, sqlQuery);
+            if (!resultList.isEmpty()) {
+                return resultList.get(0);
+            }
+        } else {
+            throw new IllegalArgumentException("Data source '" + dataSourceName + "' not found");
+        }
+
+        return null;
+    }
+
+    private List<HashMap<String, Object>> query(DataSource dataSource, String sqlQuery) throws SQLException {
+        SqlSessionFactory factory = getSqlSessionFactory(dataSource);
+
+        try (var session = factory.openSession()) {
+            try (var connection= session.getConnection()) {
+                try (PreparedStatement statement = connection.prepareStatement(sqlQuery)) {
+                    ResultSet resultSet = statement.executeQuery();
+                    if (resultSet == null) {
+                        return new ArrayList<>();
+                    }
+                    return rsToList(resultSet);
+                }
+            }
+        }
+    }
+
+    private static List<HashMap<String, Object>> rsToList(ResultSet rs) throws SQLException {
+        ResultSetMetaData md = rs.getMetaData();
+        int columns = md.getColumnCount();
+        List<HashMap<String, Object>> results = new ArrayList<>();
+
+        while (rs.next()) {
+            HashMap<String, Object> row = new HashMap<>();
+            for (int i = 1; i <= columns; i++) {
+                String property = md.getColumnLabel(i);
+                Object value = rs.getObject(i);
+                row.put(property, value);
+            }
+            results.add(row);
+        }
+
+        return results;
+    }
 }

@@ -3,16 +3,23 @@ package brave.extension;
 import brave.extension.util.KafkaUtil;
 import brave.extension.util.ResourcesPathUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
+
+import static java.lang.Thread.sleep;
 
 @Slf4j
 public class KafkaStub {
@@ -20,32 +27,107 @@ public class KafkaStub {
     public static final String JSON_SUFFIX = ".json";
 
     private final String bootstrapServers;
+    private final Producer<String, String> producer;
+    private final AdminClient adminClient;
+    private Integer numberOfTempConsumerGroups = 0;
 
     public KafkaStub(String bootstrapServers) {
         this.bootstrapServers = bootstrapServers;
+        this.producer = KafkaUtil.createProducer(bootstrapServers);
+        this.adminClient = KafkaUtil.createAdminClient(bootstrapServers);
+    }
+
+    public void loadWhenConsumerGroupsAreAssignedTopics(String dataFolderClassPath, List<String> consumerGroupIds) throws IOException, InterruptedException {
+        File[] topicDataFiles = getTopicDataFiles(dataFolderClassPath);
+        if (topicDataFiles == null) return;
+
+        Map<String, List<Map.Entry<String, String>>> mapTopicToEvents = extractTopicDataFiles(Arrays.asList(topicDataFiles));
+
+        log.warn("Preparing topics: {}", mapTopicToEvents.keySet());
+        loadTopics(mapTopicToEvents.keySet());
+
+        log.warn("Waiting consumer group is assigned a topic");
+        int attempts = 0;
+        while (!areConsumerGroupsAssignedTopics(consumerGroupIds)) {
+            sleep(1000);
+            attempts++;
+            if (attempts == 10) {
+                throw new InterruptedException("Time out for waiting consumer group is assigned a topic.");
+            }
+        }
+
+        mapTopicToEvents.forEach(this::loadTopicEvents);
+    }
+
+    private Map<String, List<Map.Entry<String, String>>> extractTopicDataFiles(List<File> topicDataFiles) throws IOException {
+        Map<String, List<Map.Entry<String, String>>> mapTopicToEvents = new HashMap<>();
+        for (File topicDataFile : topicDataFiles) {
+            log.warn("Extracting data to map of topic and events from file: {}", topicDataFile.getName());
+            String topicName = ResourcesPathUtil.trimEnd(topicDataFile.getName(), JSON_SUFFIX);
+
+            String topicDataClassPath = ResourcesPathUtil.filePathToClassPath(topicDataFile.getPath());
+            var kafkaEvents = KafkaUtil.loadEvents(topicDataClassPath);
+            mapTopicToEvents.put(topicName, kafkaEvents);
+        }
+
+        return mapTopicToEvents;
+    }
+
+    private void loadTopics(Set<String> topics) {
+        topics.forEach((topic) -> KafkaUtil.ensureTopicAvailability(adminClient, topic));
+    }
+
+    private boolean areConsumerGroupsAssignedTopics(List<String> consumerGroupIds) {
+        try {
+            for (String consumerGroupId : consumerGroupIds) {
+                DescribeConsumerGroupsResult describeResult = adminClient.describeConsumerGroups(
+                        List.of(consumerGroupId),
+                        (new DescribeConsumerGroupsOptions()).timeoutMs(10 * 1000));
+
+                List<MemberDescription> members = new ArrayList<>(
+                        describeResult.describedGroups().get(consumerGroupId).get().members());
+
+                if (members.isEmpty()) {
+                    return false;
+                }
+
+                for (MemberDescription member : members) {
+                    Set<TopicPartition> assignedTopics = member.assignment().topicPartitions();
+                    if (assignedTopics.isEmpty()) return false;
+                }
+            }
+
+            return true;
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Failed to describe consumer group {}", e.getMessage());
+        }
+
+        return false;
+    }
+
+    private void loadTopicEvents(String topic, List<Map.Entry<String, String>> events) {
+        log.warn("load events for topic: {}", topic);
+        events.forEach((event) -> producer.send(new ProducerRecord<>(topic, event.getKey(), event.getValue())));
     }
 
     public void load(String dataFolderClassPath) throws Exception {
         File[] topicDataFiles = getTopicDataFiles(dataFolderClassPath);
         if (topicDataFiles == null) return;
 
-        try (Producer<String, String> producer = KafkaUtil.createProducer(bootstrapServers)) {
-            try (AdminClient adminClient = KafkaUtil.createAdminClient(bootstrapServers)) {
-                for (File topicDataFile : topicDataFiles) {
-                    String topicName = ResourcesPathUtil.trimEnd(topicDataFile.getName(), JSON_SUFFIX);
-                    log.warn("Preparing topic: {}", topicName);
+        for (File topicDataFile : topicDataFiles) {
+            String topicName = ResourcesPathUtil.trimEnd(topicDataFile.getName(), JSON_SUFFIX);
+            log.warn("Preparing topic: {}", topicName);
 
-                    KafkaUtil.ensureTopicAvailability(adminClient, topicName);
+            KafkaUtil.ensureTopicAvailability(adminClient, topicName);
 
-                    String topicDataClassPath = ResourcesPathUtil.filePathToClassPath(topicDataFile.getPath());
-                    var kafkaEvents = KafkaUtil.loadEvents(topicDataClassPath);
+            String topicDataClassPath = ResourcesPathUtil.filePathToClassPath(topicDataFile.getPath());
+            var kafkaEvents = KafkaUtil.loadEvents(topicDataClassPath);
 
-                    for (var event : kafkaEvents) {
-                        producer.send(new ProducerRecord<>(topicName, event.getKey(), event.getValue()));
-                    }
-                }
+            for (var event : kafkaEvents) {
+                producer.send(new ProducerRecord<>(topicName, event.getKey(), event.getValue()));
             }
         }
+        
     }
 
     private File[] getTopicDataFiles(String dataFolderClassPath) {
@@ -67,13 +149,15 @@ public class KafkaStub {
     }
 
     public void unload(String dataFolderClassPath) {
-        try (AdminClient adminClient = KafkaUtil.createAdminClient(bootstrapServers)) {
-            List<String> topicNames = getTopicNames(dataFolderClassPath);
+        List<String> topicNames = getTopicNames(dataFolderClassPath);
 
-            log.warn("Resetting topics: {}", String.join(", ", topicNames));
-            KafkaUtil.deleteTopics(adminClient, topicNames);
-            log.warn("Reset topics: {}", String.join(", ", topicNames));
-        }
+        deleteTopics(topicNames);
+    }
+
+    public void deleteTopics(List<String> topics) {
+        log.warn("Resetting topics: {}", String.join(", ", topics));
+        KafkaUtil.deleteTopics(adminClient, topics);
+        log.warn("Reset topics: {}", String.join(", ", topics));
     }
 
     private List<String> getTopicNames(String dataFolderClassPath) {
@@ -94,5 +178,37 @@ public class KafkaStub {
                 .map(f -> f.toPath().getFileName().toString())
                 .map(fileName -> ResourcesPathUtil.trimEnd(fileName, JSON_SUFFIX))
                 .collect(Collectors.toList());
+    }
+
+    /*
+     * Consume a number of events from topics
+     * */
+    public List<ConsumerRecord<String, String>> consumeEvents(final List<String> topics, final int eventCount) throws InterruptedException {
+        final String tempConsumerGroupId = String.format("temp-consumer-group-%d", numberOfTempConsumerGroups);
+        Consumer<String, String> consumer = KafkaUtil.createConsumer(bootstrapServers, tempConsumerGroupId);
+        if (numberOfTempConsumerGroups >= Integer.MAX_VALUE)
+            throw new InterruptedException("Too many temporary consumer groups are created.");
+        numberOfTempConsumerGroups++;
+        consumer.subscribe(topics);
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        CountDownLatch counter = new CountDownLatch(eventCount);
+        List<ConsumerRecord<String, String>> result = new LinkedList<>();
+        executorService.execute(() -> {
+            while (counter.getCount() > 0) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+                for (var record : records) {
+                    result.add(record);
+                    counter.countDown();
+                }
+            }
+        });
+
+        //noinspection ResultOfMethodCallIgnored
+        counter.await(30, TimeUnit.SECONDS);
+        executorService.shutdownNow();
+        KafkaUtil.deleteConsumerGroups(adminClient, List.of(tempConsumerGroupId));
+        log.info("event {}", result);
+        return result;
     }
 }
