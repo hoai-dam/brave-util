@@ -175,7 +175,7 @@ public class DatabaseStub {
         }
     }
 
-    public List<HashMap<String, Object>> queryToList(String dataSourceName, String sqlQuery) throws SQLException {
+    public List<Map<String, Object>> queryToList(String dataSourceName, String sqlQuery) throws SQLException {
         DataSource dataSource = datasources.get(dataSourceName);
         if (dataSource != null) {
             return query(dataSource, sqlQuery);
@@ -184,11 +184,11 @@ public class DatabaseStub {
         }
     }
 
-    public HashMap<String, Object> findFirstById(String dataSourceName, String table, String id) throws SQLException {
+    public Map<String, Object> findFirstById(String dataSourceName, String table, String id) throws SQLException {
         DataSource dataSource = datasources.get(dataSourceName);
         String sqlQuery = format("SELECT * FROM %s WHERE id = '%s'", table, id);
         if (dataSource != null) {
-            List<HashMap<String, Object>> resultList = query(dataSource, sqlQuery);
+            List<Map<String, Object>> resultList = query(dataSource, sqlQuery);
             if (!resultList.isEmpty()) {
                 return resultList.get(0);
             }
@@ -199,7 +199,7 @@ public class DatabaseStub {
         return null;
     }
 
-    private List<HashMap<String, Object>> query(DataSource dataSource, String sqlQuery) throws SQLException {
+    private List<Map<String, Object>> query(DataSource dataSource, String sqlQuery) throws SQLException {
         SqlSessionFactory factory = getSqlSessionFactory(dataSource);
 
         try (var session = factory.openSession()) {
@@ -215,10 +215,10 @@ public class DatabaseStub {
         }
     }
 
-    private static List<HashMap<String, Object>> rsToList(ResultSet rs) throws SQLException {
+    private static List<Map<String, Object>> rsToList(ResultSet rs) throws SQLException {
         ResultSetMetaData md = rs.getMetaData();
         int columns = md.getColumnCount();
-        List<HashMap<String, Object>> results = new ArrayList<>();
+        List<Map<String, Object>> results = new ArrayList<>();
 
         while (rs.next()) {
             HashMap<String, Object> row = new HashMap<>();
