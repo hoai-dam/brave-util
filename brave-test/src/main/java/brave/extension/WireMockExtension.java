@@ -1,7 +1,6 @@
 package brave.extension;
 
 import brave.extension.util.Config;
-import brave.extension.util.EnvironmentUtil;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.*;
@@ -47,7 +46,7 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
                     // will be disposed too
                     .put(WireMockExtension.class.getName(), this);
 
-            int port = Config.getRedisPort(classLevelContext);
+            int port = Config.getWireMockPort(classLevelContext);
             String wiremockBaseUrl = "http://localhost:" + port;
 
             wireMockServer = new WireMockServer(options().port(port));
