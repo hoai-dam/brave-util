@@ -25,6 +25,11 @@ public class Config {
         return EnvironmentUtil.getString(context, Key.DATASOURCES + "." + dataSourceName + ".script");
     }
 
+    public static String[] getScripts(ExtensionContext context, String dataSourceName) {
+        String scripts = EnvironmentUtil.getString(context, Key.DATASOURCES + "." + dataSourceName + ".scripts");
+        return scripts.split(":");
+    }
+
     public static ObjectMapper getObjectMapper() {
         return objectMapper;
     }
@@ -37,8 +42,8 @@ public class Config {
         return EnvironmentUtil.getInt(context, Key.KAFKA_BOOTSTRAP_PORT, 9092);
     }
 
-    public static int getRedisPort(ExtensionContext context) {
-        return EnvironmentUtil.getInt(context, Key.WIREMOCK_PORT, 6636);
+    public static int getWireMockPort(ExtensionContext context) {
+        return EnvironmentUtil.getInt(context, Key.WIREMOCK_PORT, 8080);
     }
 
     public static class Key {

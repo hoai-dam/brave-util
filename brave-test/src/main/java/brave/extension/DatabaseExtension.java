@@ -43,8 +43,9 @@ public class DatabaseExtension implements BeforeAllCallback, ParameterResolver, 
             databaseStub = new DatabaseStub(datasources);
 
             for (String datasourceName : datasourceNames) {
-                String scriptClassPath = Config.getScript(context, datasourceName);
-                databaseStub.run(datasourceName, scriptClassPath);
+                for (String scriptClassPath : Config.getScripts(context, datasourceName)) {
+                    databaseStub.run(datasourceName, scriptClassPath);
+                }
             }
 
             BraveTestContext.setDatabaseStub(databaseStub);
