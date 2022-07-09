@@ -3,25 +3,26 @@ package brave.extension.util;
 import io.github.embeddedkafka.EmbeddedKafka;
 import io.github.embeddedkafka.EmbeddedKafkaConfigImpl;
 import lombok.extern.slf4j.Slf4j;
-//import net.manub.embeddedkafka.EmbeddedKafka;
-//import net.manub.embeddedkafka.EmbeddedKafkaConfigImpl;
 import org.apache.kafka.clients.admin.*;
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.serialization.Serdes;
 import scala.collection.immutable.HashMap;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.LockSupport;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.exception.ExceptionUtils.throwableOfType;
 import static org.apache.kafka.common.serialization.Serdes.String;
 import static scala.jdk.CollectionConverters.MapHasAsScala;
 
@@ -55,10 +56,8 @@ public class KafkaUtil {
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
 
-        return new KafkaProducer<>(
-                properties,
-                Serdes.String().serializer(),
-                Serdes.String().serializer());
+        //noinspection resource
+        return new KafkaProducer<>(properties, Serdes.String().serializer(), Serdes.String().serializer());
     }
 
     public static KafkaConsumer<String, String> createConsumer(String bootstrapServers, String groupId) {
@@ -67,6 +66,7 @@ public class KafkaUtil {
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
+        //noinspection resource
         return new KafkaConsumer<>(properties, String().deserializer(), String().deserializer());
     }
 
@@ -108,7 +108,11 @@ public class KafkaUtil {
 
             log.warn("Created topic {}", topicName);
         } catch (Throwable t) {
-            throw new IllegalStateException("Cannot create topic: " + topicName, t);
+            if (throwableOfType(t, TopicExistsException.class) != null) {
+                log.warn("Topic {} already exist", topicName);
+            } else {
+                throw new IllegalStateException("Cannot create topic: " + topicName, t);
+            }
         }
     }
 
@@ -117,9 +121,11 @@ public class KafkaUtil {
      * This is intended for resetting topic for the next test.
      */
     public static void deleteTopics(AdminClient adminClient, Collection<String> topicNames) {
-        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(topicNames, new DeleteTopicsOptions().timeoutMs(10 * 1000));
+        DeleteTopicsOptions options = new DeleteTopicsOptions().timeoutMs(10 * 1000);
+        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(topicNames, options);
 
         while (!deleteTopicsResult.all().isDone()) {
+            LockSupport.parkNanos(10 * (long) 1e6);
         }
     }
 
@@ -161,10 +167,11 @@ public class KafkaUtil {
      * Delete consumer groups from Kafka.
      */
     public static void deleteConsumerGroups(AdminClient adminClient, Collection<String> topicNames) {
-        DeleteConsumerGroupsResult deleteConsumerGroupsResult = adminClient.deleteConsumerGroups(topicNames
-                , new DeleteConsumerGroupsOptions().timeoutMs(10 * 1000));
+        DeleteConsumerGroupsOptions options = new DeleteConsumerGroupsOptions().timeoutMs(10 * 1000);
+        DeleteConsumerGroupsResult deleteConsumerGroupsResult = adminClient.deleteConsumerGroups(topicNames, options);
 
         while (!deleteConsumerGroupsResult.all().isDone()) {
+            LockSupport.parkNanos(10 * (long) 1e6);
         }
     }
 }

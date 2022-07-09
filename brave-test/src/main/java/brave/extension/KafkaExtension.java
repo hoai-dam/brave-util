@@ -14,7 +14,7 @@ public class KafkaExtension implements BeforeAllCallback, ParameterResolver, Ext
 
     private final static AtomicBoolean kafkaStarted = new AtomicBoolean(false);
 
-    private KafkaStub kafkaStub;
+    private static KafkaStub kafkaStub;
 
     @Override
     public void beforeAll(ExtensionContext classLevelContext) {
@@ -39,12 +39,13 @@ public class KafkaExtension implements BeforeAllCallback, ParameterResolver, Ext
     }
 
     @Override
-    public void close() {
+    public void close() throws Exception {
         if (kafkaStarted.compareAndSet(true, false)) {
-            // When this is disposed (trigger by the disposing of ExtensionContext.Store)
-            // we stop the EmbeddedKafka
             log.warn("Stopping {}", EmbeddedKafka.class.getName());
+
             EmbeddedKafka.stop();
+            kafkaStub.close();
+            kafkaStub = null;
             BraveTestContext.setKafkaStub(null);
         }
     }

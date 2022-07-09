@@ -1,8 +1,7 @@
 package gardentest;
 
-import brave.extension.KafkaStub;
 import brave.extension.KafkaExtension;
-import brave.extension.util.KafkaUtil;
+import brave.extension.KafkaStub;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import garden.*;
@@ -21,8 +20,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import static brave.extension.util.KafkaUtil.createConsumer;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -95,11 +98,9 @@ public class GardenTest {
                 gardenRepo.plant(new Seed("Watermelon"))
         );
 
-        List<Entry<Seed, Fruit>> gardenEvents = consume(
-                gardenRepo.getGardenMetricTopic(),
-                expectedFruits.size(),
-                Seed.class,
-                Fruit.class
+        List<Entry<Seed, Fruit>> gardenEvents = kafkaStub.consumeMessages(
+                gardenRepo.getGardenMetricTopic(), expectedFruits.size(),
+                Seed.class, Fruit.class, 10000
         );
 
         List<Fruit> actualFruits = gardenEvents.stream()
@@ -113,35 +114,4 @@ public class GardenTest {
         kafkaStub.unload("stubs/Garden/producerOfGardenMetrics_shouldBeActive/kafka");
     }
 
-    @SuppressWarnings("SameParameterValue")
-    private <K,V> List<Entry<K, V>> consume(String topic, int eventCount, Class<K> keyClass, Class<V> valueClass) throws InterruptedException {
-        Consumer<String, String> metricsConsumer = KafkaUtil.createConsumer(kafkaBootstrapServers, "garden-metrics-collector");
-        metricsConsumer.subscribe(List.of(topic));
-
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        CountDownLatch fruitCounter = new CountDownLatch(eventCount);
-        List<Entry<K, V>> events = new ArrayList<>();
-
-        executorService.execute(() -> {
-            while (fruitCounter.getCount() > 0) {
-                ConsumerRecords<String, String> records = metricsConsumer.poll(Duration.ofMillis(1000));
-                for (var record : records) {
-                    try {
-                        events.add(Map.entry(
-                                objectMapper.readValue(record.key(), keyClass),
-                                objectMapper.readValue(record.value(), valueClass)
-                        ));
-                        fruitCounter.countDown();
-                    } catch (JsonProcessingException jpex) {
-                        throw new IllegalStateException(jpex);
-                    }
-                }
-            }
-        });
-
-        //noinspection ResultOfMethodCallIgnored
-        fruitCounter.await(10, TimeUnit.SECONDS);
-        executorService.shutdownNow();
-        return events;
-    }
 }
