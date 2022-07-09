@@ -17,16 +17,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * All the test methods in that test class will SHARE THE SAME DATABASE SCHEMAS.
  */
 @Slf4j
-public class DatabaseExtension implements BeforeAllCallback, ParameterResolver {
+public class DatabaseExtension implements BeforeAllCallback, ParameterResolver, ExtensionContext.Store.CloseableResource {
 
     private final static AtomicBoolean schemaInitialized = new AtomicBoolean(false);
-    private DatabaseStub databaseStub;
+    private static DatabaseStub databaseStub;
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         if (schemaInitialized.compareAndSet(false, true)) {
-            Map<String, DataSource> datasources = new HashMap<>();
 
+            context.getRoot()
+                    // This ExtensionContext.Store instance will be disposed at the end of root context life-cycle
+                    .getStore(ExtensionContext.Namespace.GLOBAL)
+                    // And any values in this store that implements ExtensionContext.Store.CloseableResource
+                    // will be disposed too
+                    .put(DatabaseExtension.class.getName(), this);
+
+            Map<String, DataSource> datasources = new HashMap<>();
             String[] datasourceNames =  EnvironmentUtil.getString(context, Config.Key.DATASOURCES).split(",");
             for (String datasourceName : datasourceNames) {
                 HikariConfig config = Config.getDatasource(context, datasourceName);
@@ -52,5 +59,14 @@ public class DatabaseExtension implements BeforeAllCallback, ParameterResolver {
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
         return databaseStub;
+    }
+
+    @Override
+    public void close() throws Throwable {
+        if (schemaInitialized.compareAndSet(true, false)) {
+            log.warn("Removing database stub");
+            databaseStub = null;
+            BraveTestContext.setDatabaseStub(null);
+        }
     }
 }

@@ -20,7 +20,7 @@ public class RedisServerExtension implements BeforeAllCallback, ParameterResolve
 
     private final static AtomicBoolean redisStarted = new AtomicBoolean(false);
 
-    private RedisServer redisServer;
+    private static RedisServer redisServer;
 
     @Override
     public void beforeAll(ExtensionContext classLevelContext) {

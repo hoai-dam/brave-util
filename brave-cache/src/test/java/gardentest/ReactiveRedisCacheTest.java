@@ -364,7 +364,7 @@ public class ReactiveRedisCacheTest {
                 .verifyComplete();
 
         // When
-        long expireAtTimestamp = System.currentTimeMillis() + 1000;
+        long expireAtTimestamp = System.currentTimeMillis() + 2000;
         StepVerifier.create(cache.expireAt(fingerLimeSeed, expireAtTimestamp))
                 .expectNext(true)
                 .verifyComplete();
@@ -377,7 +377,7 @@ public class ReactiveRedisCacheTest {
                 .verifyComplete();
 
         // When
-        Thread.sleep(750);
+        Thread.sleep(2000);
 
         // Then
         StepVerifier.create(cache.peek(fingerLimeSeed))

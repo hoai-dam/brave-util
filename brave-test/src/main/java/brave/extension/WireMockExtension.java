@@ -32,8 +32,8 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 public class WireMockExtension implements BeforeAllCallback, ParameterResolver, ExtensionContext.Store.CloseableResource {
 
     private final static AtomicBoolean wiremockStarted = new AtomicBoolean(false);
-    private WireMockServer wireMockServer;
-    private WireMockStub wiremockStub;
+    private static WireMockServer wireMockServer;
+    private static WireMockStub wiremockStub;
 
     @Override
     public void beforeAll(ExtensionContext classLevelContext) {
@@ -61,8 +61,10 @@ public class WireMockExtension implements BeforeAllCallback, ParameterResolver, 
     public void close() {
         if (wiremockStarted.compareAndSet(true, false)) {
             log.warn("Stopping {}", WireMockServer.class.getName());
+
             wireMockServer.stop();
             wireMockServer = null;
+            wiremockStub = null;
             BraveTestContext.setWireMockStub(null);
         }
     }
