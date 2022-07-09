@@ -33,14 +33,14 @@ public class DatabaseExtension implements BeforeAllCallback, ParameterResolver, 
                     // will be disposed too
                     .put(DatabaseExtension.class.getName(), this);
 
-            Map<String, DataSource> datasources = new HashMap<>();
-            String[] datasourceNames =  EnvironmentUtil.getString(context, Config.Key.DATASOURCES).split(",");
+            Map<String, DataSource> dataSources = new HashMap<>();
+            String[] datasourceNames =  EnvironmentUtil.getString(context, Config.Key.DATA_SOURCES).split(",");
             for (String datasourceName : datasourceNames) {
                 HikariConfig config = Config.getDatasource(context, datasourceName);
-                datasources.put(datasourceName, new HikariDataSource(config));
+                dataSources.put(datasourceName, new HikariDataSource(config));
             }
 
-            databaseStub = new DatabaseStub(datasources);
+            databaseStub = new DatabaseStub(dataSources);
 
             for (String datasourceName : datasourceNames) {
                 for (String scriptClassPath : Config.getScripts(context, datasourceName)) {
@@ -63,7 +63,7 @@ public class DatabaseExtension implements BeforeAllCallback, ParameterResolver, 
     }
 
     @Override
-    public void close() throws Throwable {
+    public void close() {
         if (schemaInitialized.compareAndSet(true, false)) {
             log.warn("Removing database stub");
             databaseStub = null;
