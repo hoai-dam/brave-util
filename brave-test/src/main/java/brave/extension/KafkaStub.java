@@ -2,8 +2,13 @@ package brave.extension;
 
 import brave.extension.util.KafkaUtil;
 import brave.extension.util.ResourcesPathUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.DescribeConsumerGroupsOptions;
+import org.apache.kafka.clients.admin.DescribeConsumerGroupsResult;
+import org.apache.kafka.clients.admin.MemberDescription;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -17,24 +22,27 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 
-import static java.lang.Thread.sleep;
-
 @Slf4j
-public class KafkaStub {
+public class KafkaStub implements AutoCloseable {
 
-    public static final String JSON_SUFFIX = ".json";
+    private static final String JSON_SUFFIX = ".json";
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AtomicBoolean isActive = new AtomicBoolean(false);
     private final String bootstrapServers;
-    private final Producer<String, String> producer;
-    private final AdminClient adminClient;
-    private Integer numberOfTempConsumerGroups = 0;
+    private Producer<String, String> producer;
+    private AdminClient adminClient;
+    private Integer consumerGroupCount = 0;
 
     public KafkaStub(String bootstrapServers) {
         this.bootstrapServers = bootstrapServers;
         this.producer = KafkaUtil.createProducer(bootstrapServers);
         this.adminClient = KafkaUtil.createAdminClient(bootstrapServers);
+        this.isActive.set(true);
     }
 
     public void loadWhenConsumerGroupsAreAssignedTopics(String dataFolderClassPath, List<String> consumerGroupIds) throws IOException, InterruptedException {
@@ -49,9 +57,9 @@ public class KafkaStub {
         log.warn("Waiting consumer group is assigned a topic");
         int attempts = 0;
         while (!areConsumerGroupsAssignedTopics(consumerGroupIds)) {
-            sleep(1000);
+            LockSupport.parkNanos(10 * (long) 1e6);
             attempts++;
-            if (attempts == 10) {
+            if (attempts == 1000) {
                 throw new InterruptedException("Time out for waiting consumer group is assigned a topic.");
             }
         }
@@ -183,32 +191,84 @@ public class KafkaStub {
     /*
      * Consume a number of events from topics
      * */
-    public List<ConsumerRecord<String, String>> consumeEvents(final List<String> topics, final int eventCount) throws InterruptedException {
-        final String tempConsumerGroupId = String.format("temp-consumer-group-%d", numberOfTempConsumerGroups);
-        Consumer<String, String> consumer = KafkaUtil.createConsumer(bootstrapServers, tempConsumerGroupId);
-        if (numberOfTempConsumerGroups >= Integer.MAX_VALUE)
-            throw new InterruptedException("Too many temporary consumer groups are created.");
-        numberOfTempConsumerGroups++;
-        consumer.subscribe(topics);
+    public List<ConsumerRecord<String, String>> consumeEvents(
+            List<String> topics, int eventCount, long timeoutMillis
+    ) throws InterruptedException {
+        final String tempConsumerGroupId = String.format("brave-temp-consumer-group-%d", consumerGroupCount);
+        List<ConsumerRecord<String, String>> result = new ArrayList<>();
 
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        CountDownLatch counter = new CountDownLatch(eventCount);
-        List<ConsumerRecord<String, String>> result = new LinkedList<>();
-        executorService.execute(() -> {
-            while (counter.getCount() > 0) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
-                for (var record : records) {
-                    result.add(record);
-                    counter.countDown();
+        try (Consumer<String, String> consumer = KafkaUtil.createConsumer(bootstrapServers, tempConsumerGroupId)) {
+            consumerGroupCount += 1;
+            consumer.subscribe(topics);
+
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            CountDownLatch counter = new CountDownLatch(eventCount);
+            executorService.execute(() -> {
+                while (counter.getCount() > 0) {
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+                    for (var record : records) {
+                        result.add(record);
+                        counter.countDown();
+                    }
                 }
-            }
-        });
 
-        //noinspection ResultOfMethodCallIgnored
-        counter.await(30, TimeUnit.SECONDS);
-        executorService.shutdownNow();
+            });
+
+            if (!counter.await(timeoutMillis, TimeUnit.MILLISECONDS)) {
+                String errorMessage = String.format("Timeout waiting for %d events from topics %s", eventCount, String.join(", ", topics));
+                throw new IllegalStateException(errorMessage);
+            }
+
+            executorService.shutdownNow();
+        }
+
         KafkaUtil.deleteConsumerGroups(adminClient, List.of(tempConsumerGroupId));
-        log.info("event {}", result);
         return result;
+    }
+
+    public <K,V> List<Map.Entry<K, V>> consumeMessages(
+            List<String> topics, int expectedCount,
+            Class<K> keyClass, Class<V> valueClass,
+            long timeoutMillis) throws InterruptedException {
+
+        List<ConsumerRecord<String, String>> records = this.consumeEvents(topics, expectedCount, timeoutMillis);
+        List<Map.Entry<K, V>> messages = new ArrayList<>();
+        try {
+            for (var record : records) {
+                messages.add(Map.entry(
+                        objectMapper.readValue(record.key(), keyClass),
+                        objectMapper.readValue(record.value(), valueClass)
+                ));
+            }
+        } catch (JsonProcessingException jpex) {
+            throw new IllegalStateException(jpex);
+        }
+
+        return messages;
+    }
+
+    public <K,V> List<Map.Entry<K, V>> consumeMessages(
+            String topic, int expectedCount,
+            Class<K> keyClass, Class<V> valueClass,
+            long timeoutMillis) throws InterruptedException {
+
+        return consumeMessages(List.of(topic), expectedCount, keyClass, valueClass, timeoutMillis);
+    }
+
+    @Override
+    public void close() {
+        if (isActive.compareAndSet(true, false)) {
+            AdminClient capturedClient = this.adminClient;
+            this.adminClient = null;
+            if (capturedClient != null) {
+                capturedClient.close();
+            }
+
+            Producer<?, ?> capturedProducer = this.producer;
+            this.producer = null;
+            if (capturedProducer != null) {
+                capturedProducer.close();
+            }
+        }
     }
 }

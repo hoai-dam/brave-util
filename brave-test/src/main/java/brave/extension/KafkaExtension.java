@@ -39,11 +39,12 @@ public class KafkaExtension implements BeforeAllCallback, ParameterResolver, Ext
     }
 
     @Override
-    public void close() {
+    public void close() throws Exception {
         if (kafkaStarted.compareAndSet(true, false)) {
             log.warn("Stopping {}", EmbeddedKafka.class.getName());
 
             EmbeddedKafka.stop();
+            kafkaStub.close();
             kafkaStub = null;
             BraveTestContext.setKafkaStub(null);
         }
