@@ -45,7 +45,7 @@ public class KafkaStub implements AutoCloseable {
         this.isActive.set(true);
     }
 
-    public void loadWhenConsumerGroupsAreAssignedTopics(String dataFolderClassPath, List<String> consumerGroupIds) throws IOException, InterruptedException {
+    public void loadForConsumerGroups(String dataFolderClassPath, List<String> consumerGroupIds) throws IOException, InterruptedException {
         File[] topicDataFiles = getTopicDataFiles(dataFolderClassPath);
         if (topicDataFiles == null) return;
 
