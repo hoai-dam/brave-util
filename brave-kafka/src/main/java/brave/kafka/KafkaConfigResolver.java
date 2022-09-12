@@ -1,6 +1,7 @@
 package brave.kafka;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.common.config.ConfigDef;
 import org.springframework.core.env.AbstractEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MutablePropertySources;
@@ -14,6 +15,8 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.stream.StreamSupport;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Component
 @RequiredArgsConstructor
 public class KafkaConfigResolver {
@@ -23,6 +26,9 @@ public class KafkaConfigResolver {
     private final AbstractEnvironment environment;
 
     public Properties getProperties(String path) {
+        if (isBlank(path))
+            return new Properties();
+
         Properties properties = new Properties();
         MutablePropertySources propertySources = environment.getPropertySources();
         String pathPrefix = path + ".";
@@ -40,6 +46,27 @@ public class KafkaConfigResolver {
                 });
 
         return properties;
+    }
+
+    public Properties getProperties(String path, ConfigDef configDef) {
+        Properties props = this.getProperties(path);
+
+        for (String propertyName : props.stringPropertyNames()) {
+            String value = props.getProperty(propertyName);
+            ConfigDef.ConfigKey configKey = configDef.configKeys().get(propertyName);
+
+            if (propertyName.endsWith(".ms")) {
+                if (configKey.type() == ConfigDef.Type.SHORT) {
+                    props.put(propertyName, (short) Duration.parse(value).toMillis());
+                } else if (configKey.type() == ConfigDef.Type.INT) {
+                    props.put(propertyName, (int) Duration.parse(value).toMillis());
+                } else if (configKey.type() == ConfigDef.Type.LONG) {
+                    props.put(propertyName, Duration.parse(value).toMillis());
+                }
+            }
+        }
+
+        return props;
     }
 
     public String getString(String expression) {
