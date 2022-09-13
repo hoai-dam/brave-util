@@ -54,6 +54,7 @@ public @interface Streams {
     @Retention(RetentionPolicy.RUNTIME)
     @interface Sink {
         String name();
+        String topic();
         String[] parentNames();
         Class<? extends Serializer> keySerializer() default ByteArraySerializer .class;
         Class<? extends Serializer> valueSerializer() default ByteArraySerializer.class;
