@@ -31,7 +31,8 @@ public class ProducersTest {
     @Test
     void producerOfGardenMetrics_shouldBeActive(KafkaStub kafkaStub) throws Exception {
         // Given
-        kafkaStub.load("stubs/Garden/producerOfGardenMetrics_shouldBeActive/kafka");
+        kafkaStub.load("stubs/Garden/injectedGardenMetricProducer/kafka");
+        assertThat(gardenRepo.getGardenProducer()).isNotNull();
 
         // When
         List<Fruit> expectedFruits = List.of(
@@ -55,6 +56,6 @@ public class ProducersTest {
         assertThat(actualFruits).containsExactlyInAnyOrderElementsOf(expectedFruits);
 
         // Cleanup
-        kafkaStub.unload("stubs/Garden/producerOfGardenMetrics_shouldBeActive/kafka");
+        kafkaStub.unload("stubs/Garden/injectedGardenMetricProducer/kafka");
     }
 }

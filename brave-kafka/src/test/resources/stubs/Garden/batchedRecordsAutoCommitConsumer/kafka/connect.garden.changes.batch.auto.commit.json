@@ -5,8 +5,8 @@
     "key": {
       "name": "Apple"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes.single",
+    "offset": 0,
+    "topic": "connect.garden.changes.batch.auto.commit",
     "value": {
       "name": "Apple"
     }
@@ -17,8 +17,8 @@
     "key": {
       "name": "Orange"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes.single",
+    "offset": 1,
+    "topic": "connect.garden.changes.batch.auto.commit",
     "value": {
       "name": "Orange"
     }
@@ -29,8 +29,8 @@
     "key": {
       "name": "Banana"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes.single",
+    "offset": 2,
+    "topic": "connect.garden.changes.batch.auto.commit",
     "value": {
       "name": "Banana"
     }
@@ -41,8 +41,8 @@
     "key": {
       "name": "Kiwi"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes.single",
+    "offset": 3,
+    "topic": "connect.garden.changes.batch.auto.commit",
     "value": {
       "name": "Kiwi"
     }
@@ -53,8 +53,8 @@
     "key": {
       "name": "Mango"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes.single",
+    "offset": 4,
+    "topic": "connect.garden.changes.batch.auto.commit",
     "value": {
       "name": "Mango"
     }

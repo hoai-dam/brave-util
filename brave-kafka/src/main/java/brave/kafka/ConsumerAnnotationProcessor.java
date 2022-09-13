@@ -78,10 +78,10 @@ class ConsumerAnnotationProcessor {
             Properties props = resolver.getProperties(braveConsumers.properties(), ConsumerConfig.configDef());
 
             if (isEmpty(props, BOOTSTRAP_SERVERS_CONFIG)) {
-                if (braveConsumers.bootstrapServers().length == 0) {
+                if (isBlank(braveConsumers.bootstrapServers())) {
                     throw new IllegalStateException("No bootstrap servers provided");
                 }
-                props.put(BOOTSTRAP_SERVERS_CONFIG, braveConsumers.bootstrapServers());
+                props.put(BOOTSTRAP_SERVERS_CONFIG, resolver.getString(braveConsumers.bootstrapServers()));
             }
 
             if (isEmpty(props, GROUP_ID_CONFIG)) {
