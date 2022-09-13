@@ -6,7 +6,7 @@
       "name": "Apple"
     },
     "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "topic": "connect.garden.changes.single",
     "value": {
       "name": "Apple"
     }
@@ -18,7 +18,7 @@
       "name": "Orange"
     },
     "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "topic": "connect.garden.changes.single",
     "value": {
       "name": "Orange"
     }
@@ -30,7 +30,7 @@
       "name": "Banana"
     },
     "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "topic": "connect.garden.changes.single",
     "value": {
       "name": "Banana"
     }
@@ -42,7 +42,7 @@
       "name": "Kiwi"
     },
     "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "topic": "connect.garden.changes.single",
     "value": {
       "name": "Kiwi"
     }
@@ -54,7 +54,7 @@
       "name": "Mango"
     },
     "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "topic": "connect.garden.changes.single",
     "value": {
       "name": "Mango"
     }

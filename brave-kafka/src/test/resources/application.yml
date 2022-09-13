@@ -5,7 +5,7 @@ spring:
 
 replicate:
   garden-watcher:
-    topics: connect.garden.changes
+    topics: connect.garden.changes.single
     threads-count: 1
     polling-timeout: PT1S
     ignore-exception: true

@@ -6,7 +6,6 @@ import java.lang.reflect.Array;
 import java.util.*;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.springframework.util.ObjectUtils.isArray;
 
 public class PropertyUtil {
 
