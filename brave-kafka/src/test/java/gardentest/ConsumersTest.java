@@ -2,15 +2,12 @@ package gardentest;
 
 import brave.extension.KafkaExtension;
 import brave.extension.KafkaStub;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import garden.GardenWatcher;
 import garden.GardenWatcherInBatch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Duration;
@@ -25,20 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ConsumersTest {
 
     @Autowired
-    ApplicationContext context;
-
-    @Autowired
     GardenWatcher gardenWatcher;
 
     @Autowired
     GardenWatcherInBatch gardenWatcherInBatch;
-
-
-    @Autowired
-    ObjectMapper objectMapper;
-
-    @Value("${kafka.bootstrap.servers}")
-    String kafkaBootstrapServers;
 
     @Test
     void consumerOfGardenChanges_shouldBeActive(KafkaStub kafkaStub) throws Exception {
