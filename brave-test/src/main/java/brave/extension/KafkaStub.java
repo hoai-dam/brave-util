@@ -21,10 +21,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
+
+import static java.time.Duration.ofSeconds;
 
 @Slf4j
 public class KafkaStub implements AutoCloseable {
@@ -45,30 +47,23 @@ public class KafkaStub implements AutoCloseable {
         this.isActive.set(true);
     }
 
-    public void loadForConsumerGroups(String dataFolderClassPath, List<String> consumerGroupIds) throws IOException, InterruptedException {
+    public void loadForConsumerGroups(String dataFolderClassPath, List<String> consumerGroupIds) throws IOException, TimeoutException {
         File[] topicDataFiles = getTopicDataFiles(dataFolderClassPath);
         if (topicDataFiles == null) return;
 
-        Map<String, List<Map.Entry<String, String>>> mapTopicToEvents = extractTopicDataFiles(Arrays.asList(topicDataFiles));
+        Map<String, List<Entry<String, String>>> mapTopicToEvents = extractTopicDataFiles(Arrays.asList(topicDataFiles));
 
         log.warn("Preparing topics: {}", mapTopicToEvents.keySet());
-        loadTopics(mapTopicToEvents.keySet());
+        mapTopicToEvents.forEach((topic, events) -> KafkaUtil.ensureTopicAvailability(adminClient, topic));
 
         log.warn("Waiting consumer group is assigned a topic");
-        int attempts = 0;
-        while (!areConsumerGroupsAssignedTopics(consumerGroupIds)) {
-            LockSupport.parkNanos(10 * (long) 1e6);
-            attempts++;
-            if (attempts == 1000) {
-                throw new InterruptedException("Time out for waiting consumer group is assigned a topic.");
-            }
-        }
+        KafkaUtil.waitUntil(() -> areConsumerGroupsAssignedTopics(consumerGroupIds), ofSeconds(10));
 
-        mapTopicToEvents.forEach(this::loadTopicEvents);
+        mapTopicToEvents.forEach(this::loadTopicMessages);
     }
 
-    private Map<String, List<Map.Entry<String, String>>> extractTopicDataFiles(List<File> topicDataFiles) throws IOException {
-        Map<String, List<Map.Entry<String, String>>> mapTopicToEvents = new HashMap<>();
+    private Map<String, List<Entry<String, String>>> extractTopicDataFiles(List<File> topicDataFiles) throws IOException {
+        Map<String, List<Entry<String, String>>> mapTopicToEvents = new HashMap<>();
         for (File topicDataFile : topicDataFiles) {
             log.warn("Extracting data to map of topic and events from file: {}", topicDataFile.getName());
             String topicName = ResourcesPathUtil.trimEnd(topicDataFile.getName(), JSON_SUFFIX);
@@ -79,10 +74,6 @@ public class KafkaStub implements AutoCloseable {
         }
 
         return mapTopicToEvents;
-    }
-
-    private void loadTopics(Set<String> topics) {
-        topics.forEach((topic) -> KafkaUtil.ensureTopicAvailability(adminClient, topic));
     }
 
     private boolean areConsumerGroupsAssignedTopics(List<String> consumerGroupIds) {
@@ -113,9 +104,9 @@ public class KafkaStub implements AutoCloseable {
         return false;
     }
 
-    private void loadTopicEvents(String topic, List<Map.Entry<String, String>> events) {
-        log.warn("load events for topic: {}", topic);
-        events.forEach((event) -> producer.send(new ProducerRecord<>(topic, event.getKey(), event.getValue())));
+    private void loadTopicMessages(String topic, List<Entry<String, String>> messages) {
+        log.warn("Loading data for topic '{}': {} messages", topic, messages.size());
+        messages.forEach((e) -> producer.send(new ProducerRecord<>(topic, e.getKey(), e.getValue())));
     }
 
     public void load(String dataFolderClassPath) throws Exception {
@@ -226,13 +217,13 @@ public class KafkaStub implements AutoCloseable {
         return result;
     }
 
-    public <K,V> List<Map.Entry<K, V>> consumeMessages(
+    public <K,V> List<Entry<K, V>> consumeMessages(
             List<String> topics, int expectedCount,
             Class<K> keyClass, Class<V> valueClass,
             long timeoutMillis) throws InterruptedException {
 
         List<ConsumerRecord<String, String>> records = this.consumeEvents(topics, expectedCount, timeoutMillis);
-        List<Map.Entry<K, V>> messages = new ArrayList<>();
+        List<Entry<K, V>> messages = new ArrayList<>();
         try {
             for (var record : records) {
                 messages.add(Map.entry(
@@ -247,7 +238,7 @@ public class KafkaStub implements AutoCloseable {
         return messages;
     }
 
-    public <K,V> List<Map.Entry<K, V>> consumeMessages(
+    public <K,V> List<Entry<K, V>> consumeMessages(
             String topic, int expectedCount,
             Class<K> keyClass, Class<V> valueClass,
             long timeoutMillis) throws InterruptedException {

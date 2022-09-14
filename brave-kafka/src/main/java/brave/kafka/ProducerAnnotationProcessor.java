@@ -13,7 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static brave.kafka.ReflectionUtil.name;
+import static brave.kafka.ReflectionUtil.*;
+import static java.lang.String.format;
 
 @Component
 @RequiredArgsConstructor
@@ -21,6 +22,7 @@ public class ProducerAnnotationProcessor {
 
     private final KafkaConfig config;
     private final KafkaConfigResolver configResolver;
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private final Map<String, Producer<?, ?>> producers = new LinkedHashMap<>();
 
     @PostConstruct
@@ -38,28 +40,21 @@ public class ProducerAnnotationProcessor {
             for (Field field : target.getClass().getDeclaredFields()) {
                 Producers.Inject injectProducer = field.getAnnotation(Producers.Inject.class);
                 if (injectProducer == null) continue;
-                if (field.getType() != Producer.class) {
-                    throw new IllegalStateException("Only apply " + Producers.Inject.class.getName() + " on fields of type " + Producer.class.getName());
+                if (canBeSet(field, KafkaProducer.class)) {
+                    //noinspection unchecked
+                    Serializer<Object> keySer = configResolver.getInstance(injectProducer.keySerializer());
+                    //noinspection unchecked
+                    Serializer<Object> valueSer = configResolver.getInstance(injectProducer.valueSerializer());
+
+                    Properties properties = getKafkaConsumerProperties(braveProducers, injectProducer);
+                    KafkaProducer<Object, Object> producer = new KafkaProducer<>(properties, keySer, valueSer);
+
+                    setField(target, field, producer);
+                    this.producers.put(name(field), producer);
+                } else {
+                    throw new IllegalStateException(format("%s.%s must be of type %s and must NOT be final",
+                            target.getClass().getName(), field.getName(), KafkaProducer.class.getName()));
                 }
-
-                Properties properties = getKafkaConsumerProperties(braveProducers, injectProducer);
-                //noinspection unchecked
-                Serializer<Object> keySer = configResolver.getInstance(injectProducer.keySerializer());
-                //noinspection unchecked
-                Serializer<Object> valueSer = configResolver.getInstance(injectProducer.valueSerializer());
-                KafkaProducer<Object, Object> producer = new KafkaProducer<>(properties, keySer, valueSer);
-
-                boolean accessible = field.canAccess(target);
-                try {
-                    field.setAccessible(true);
-                    field.set(target, producer);
-                } catch (IllegalAccessException iaex) {
-                    throw new IllegalStateException("Cannot access field " + name(field), iaex);
-                } finally {
-                    field.setAccessible(accessible);
-                }
-
-                this.producers.put(name(field), producer);
             }
         }
     }

@@ -34,7 +34,7 @@ public class PropertyUtil {
         return false;
     }
 
-    private static boolean sizeIsEmpty(final Object obj) {
+    public static boolean sizeIsEmpty(final Object obj) {
         if (obj == null) {
             return true;
 

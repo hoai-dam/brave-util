@@ -11,9 +11,9 @@ public @interface Streams {
     String properties() default "";
 
     // Kafka stream configs
-    String[] bootstrapServers() default {};
+    String bootstrapServers() default "";
     String applicationId() default "";
-    int pollMillis() default 300000;
+    int pollMillis() default 100;
     int commitIntervalMillis() default 5000;
     int requestTimeoutMillis() default 60000;
     int numStreamThreads() default 1;
@@ -24,45 +24,15 @@ public @interface Streams {
     boolean ignoreException() default false;
     boolean reportHealthCheck() default true;
 
-    @Repeatable(Sources.class)
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
-    @interface Source {
-
-        String name();
-        String[] topics() default {};
-        Class<? extends Deserializer> keyDeserializer() default ByteArrayDeserializer.class;
-        Class<? extends Deserializer> valueDeserializer() default ByteArrayDeserializer.class;
+    @interface Topology {
 
     }
 
-    @Target(ElementType.METHOD)
+    @Target({ElementType.FIELD, ElementType.METHOD})
     @Retention(RetentionPolicy.RUNTIME)
-    @interface Sources {
-        Source[] value();
-    }
+    @interface Inject {
 
-    @Target(ElementType.METHOD)
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Processor {
-        String name();
-        String[] parentNames();
-    }
-
-    @Repeatable(Sinks.class)
-    @Target(ElementType.METHOD)
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Sink {
-        String name();
-        String topic();
-        String[] parentNames();
-        Class<? extends Serializer> keySerializer() default ByteArraySerializer .class;
-        Class<? extends Serializer> valueSerializer() default ByteArraySerializer.class;
-    }
-
-    @Target(ElementType.METHOD)
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Sinks {
-        Sink[] value();
     }
 }

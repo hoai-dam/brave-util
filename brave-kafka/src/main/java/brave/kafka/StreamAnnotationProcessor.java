@@ -2,12 +2,11 @@ package brave.kafka;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.processor.api.Processor;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -15,15 +14,16 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import static brave.kafka.PropertyUtil.fallbackIfEmpty;
-import static brave.kafka.ReflectionUtil.signature;
+import static brave.kafka.PropertyUtil.sizeIsEmpty;
+import static brave.kafka.ReflectionUtil.*;
+import static java.lang.String.format;
+import static org.apache.kafka.streams.KafkaStreams.State.ERROR;
+import static org.apache.kafka.streams.KafkaStreams.State.PENDING_ERROR;
 import static org.apache.kafka.streams.StreamsConfig.*;
 import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.REPLACE_THREAD;
-import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
 
 @Slf4j
 @Component
@@ -41,22 +41,33 @@ public class StreamAnnotationProcessor {
         for (String beanName : streamBeans.keySet()) {
             Object streamBean = streamBeans.get(beanName);
 
-            this.kafkaStreams.put(beanName, new StreamsBuilder(streamBean).process());
+            this.kafkaStreams.put(beanName, new StreamsBuilder(beanName, streamBean).process());
         }
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void applicationReady() {
-        kafkaStreams.values().forEach(KafkaStreams::start);
+        for (String streamName : kafkaStreams.keySet()) {
+            KafkaStreams streams = kafkaStreams.get(streamName);
+            try {
+                log.warn("Starting stream {}", streamName);
+                streams.start();
+                log.warn("Started stream {}", streamName);
+            } catch (Exception ex) {
+                log.error("Failed to start kafka stream {}", streamName, ex);
+            }
+        }
     }
 
     class StreamsBuilder {
 
+        private final String streamName;
         private final Object target;
         private final Properties properties;
         private final Streams streams;
 
-        StreamsBuilder(Object target) {
+        StreamsBuilder(String streamName, Object target) {
+            this.streamName = streamName;
             this.target = target;
             this.streams = target.getClass().getAnnotation(Streams.class);
 
@@ -67,47 +78,110 @@ public class StreamAnnotationProcessor {
         }
 
         KafkaStreams process() {
-            Topology topology = new Topology();
+            Topology topology = getTopology();
+            KafkaStreams kafkaStreams = new KafkaStreams(topology, properties);
+            kafkaStreams.setStateListener((newState, oldState) ->
+                    log.info("Stream state changed {} -> {}", oldState, newState));
+
+            buildErrorHandling(kafkaStreams);
+            injectKafkaStream(kafkaStreams);
+
+            return kafkaStreams;
+        }
+
+        private Topology getTopology() {
 
             for (Method method : target.getClass().getDeclaredMethods()) {
-
-                Streams.Source[] sources = method.getAnnotationsByType(Streams.Source.class);
-                if (sources.length > 0) {
-                    addSources(topology, sources);
-                }
-
-                Streams.Processor processor = method.getAnnotation(Streams.Processor.class);
-                if (processor != null) {
-                    addProcessor(topology, method, processor);
-                }
-
-                Streams.Sink[] sinks = method.getAnnotationsByType(Streams.Sink.class);
-                if (sinks.length > 0) {
-                    addSinks(topology, sinks);
+                Streams.Topology topologyAnnotation = method.getAnnotation(Streams.Topology.class);
+                if (topologyAnnotation != null) {
+                    if (method.getParameterCount() == 0 && Topology.class.isAssignableFrom(method.getReturnType())) {
+                        try {
+                            return (Topology) method.invoke(target);
+                        } catch (IllegalAccessException e) {
+                            throw new IllegalStateException("Can not build topology", e);
+                        } catch (InvocationTargetException e) {
+                            throw new IllegalStateException("Failed to build topology", e);
+                        }
+                    } else {
+                        throw new IllegalStateException("Invalid topology builder");
+                    }
                 }
             }
 
-            KafkaStreams kafkaStreams = new KafkaStreams(topology, properties);
-            kafkaStreams.setStateListener((newState, oldState) -> {
 
-            });
-            kafkaStreams.setUncaughtExceptionHandler(exception -> {
-                if (streams.ignoreException()) {
+            throw new IllegalStateException("No topology builder found");
+        }
+
+        private void buildErrorHandling(KafkaStreams kafkaStreams) {
+            if (streams.ignoreException()) {
+                kafkaStreams.setUncaughtExceptionHandler(exception -> {
                     log.warn("Ignoring uncaught exception & replacing stream thread", exception);
                     return REPLACE_THREAD;
+                });
+            }
+
+            if (streams.reportHealthCheck()) {
+                String streamKey = "stream{" + streamName + "}";
+                StreamAnnotationProcessor.this.config.registerBean(target.getClass().getName(), (HealthIndicator) () -> {
+                    KafkaStreams.State streamState = kafkaStreams.state();
+                    if (streamState == ERROR || streamState == PENDING_ERROR) {
+                        log.warn("{} entered state {}", streamKey, streamState);
+                    }
+                    if (streamState == ERROR) {
+                        return Health.down()
+                                .withDetail(streamKey, streamState)
+                                .build();
+                    }
+                    return Health.up()
+                            .withDetail(streamKey, streamState)
+                            .build();
+                });
+            }
+        }
+
+        private void injectKafkaStream(KafkaStreams kafkaStreams) {
+            for (var field : target.getClass().getDeclaredFields()) {
+                Streams.Inject injectAnnotation = field.getAnnotation(Streams.Inject.class);
+                if (injectAnnotation == null) continue;
+                if (canBeSet(field, KafkaStreams.class)) {
+                    setField(target, field, kafkaStreams);
+                    break;
                 } else {
-                    log.error("Getting uncaught exception & shutdown streams client", exception);
-                    return SHUTDOWN_CLIENT;
+                    throw new IllegalStateException(format("%s.%s must be of type %s and must NOT be final",
+                            target.getClass().getName(), field.getName(), KafkaStreams.class.getName()));
                 }
-            });
-            return kafkaStreams;
+            }
+
+            for (var method : target.getClass().getDeclaredMethods()) {
+                Streams.Inject injectAnnotation = method.getAnnotation(Streams.Inject.class);
+                if (injectAnnotation == null) continue;
+                if (isSetter(method, KafkaStreams.class)) {
+                    try {
+                        method.invoke(target, kafkaStreams);
+                    } catch (IllegalAccessException e) {
+                        throw new IllegalStateException("Can not build topology", e);
+                    } catch (InvocationTargetException e) {
+                        throw new IllegalStateException("Failed to build topology", e);
+                    }
+                    break;
+                } else {
+                    throw new IllegalStateException(format("%s.%s must accept exactly one parameter of type %s",
+                            target.getClass().getName(), method.getName(), KafkaStreams.class.getName()));
+                }
+            }
         }
 
         private Properties getKafkaStreamsProperties(Streams streams) {
             Properties props = resolver.getProperties(streams.properties(), StreamsConfig.configDef());
 
-            fallbackIfEmpty(props, BOOTSTRAP_SERVERS_CONFIG, streams.bootstrapServers());
-            fallbackIfEmpty(props, APPLICATION_ID_CONFIG, streams.applicationId());
+            if (!sizeIsEmpty(streams.bootstrapServers())) {
+                fallbackIfEmpty(props, BOOTSTRAP_SERVERS_CONFIG, resolver.getString(streams.bootstrapServers()));
+            }
+
+            if (!sizeIsEmpty(streams.applicationId())) {
+                fallbackIfEmpty(props, APPLICATION_ID_CONFIG, resolver.getString(streams.applicationId()));
+            }
+
             fallbackIfEmpty(props, POLL_MS_CONFIG, streams.pollMillis());
             fallbackIfEmpty(props, COMMIT_INTERVAL_MS_CONFIG, streams.commitIntervalMillis());
             fallbackIfEmpty(props, REQUEST_TIMEOUT_MS_CONFIG, streams.requestTimeoutMillis());
@@ -119,46 +193,5 @@ public class StreamAnnotationProcessor {
             return props;
         }
 
-        private void addSources(Topology topology, Streams.Source[] sources) {
-            for (Streams.Source source : sources) {
-                //noinspection unchecked
-                Deserializer<Object> keyDeserializer = resolver.getInstance(source.keyDeserializer());
-                //noinspection unchecked
-                Deserializer<Object> valueDeserializer = resolver.getInstance(source.valueDeserializer());
-                topology.addSource(source.name(), keyDeserializer, valueDeserializer, source.topics());
-            }
-        }
-
-        private void addProcessor(Topology topology, Method method, Streams.Processor processor) {
-
-            if (method.getParameterCount() > 0) {
-                throw new IllegalStateException("Processor supplier: " + signature(method) + " must have NO parameter");
-            }
-
-            if (!Processor.class.isAssignableFrom(method.getReturnType())) {
-                throw new IllegalStateException("Processor supplier: " + signature(method) + " must return " + Processor.class.getName());
-            }
-            topology.addProcessor(processor.name(), () -> processorSupplier(method), processor.parentNames());
-        }
-
-        private void addSinks(Topology topology, Streams.Sink[] sinks) {
-            for (Streams.Sink sink : sinks) {
-                //noinspection unchecked
-                Serializer<Object> keySerializer = resolver.getInstance(sink.keySerializer());
-                //noinspection unchecked
-                Serializer<Object> valueSerializer = resolver.getInstance(sink.valueSerializer());
-                topology.addSink(sink.name(), sink.topic(), keySerializer, valueSerializer, sink.parentNames());
-            }
-        }
-
-        private Processor<?, ?, ?, ?> processorSupplier(Method method) {
-            try {
-                return (Processor<?, ?, ?, ?>) method.invoke(target);
-            } catch (IllegalAccessException iaex) {
-                throw new IllegalStateException("Cannot access method: " + signature(method), iaex);
-            } catch (InvocationTargetException itex) {
-                throw new IllegalStateException("Cannot get a processor with: " + signature(method), itex);
-            }
-        }
     }
 }
