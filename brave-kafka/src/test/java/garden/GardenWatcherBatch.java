@@ -16,15 +16,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 @Consumers(properties = "kafka.consumer", groupId = "garden-watcher-in-batch")
-public class GardenWatcherInBatch {
+public class GardenWatcherBatch {
 
     private final CountDownLatch fullGardenLatch = new CountDownLatch(5);
 
-    @Consumers.Handler(
-            properties = "replicate.garden-watcher-in-batch",
-            keyDeserializer = SeedDeserializer.class,
-            valueDeserializer = FruitDeserializer.class
-    )
+    @Consumers.Handler(properties = "replicate.garden-watcher-in-batch")
     public void processBatch(ConsumerRecords<Seed, Fruit> consumerRecords, Consumer<Seed, Fruit> consumer) {
 
         for (TopicPartition partition : consumerRecords.partitions()) {

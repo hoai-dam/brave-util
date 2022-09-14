@@ -5,31 +5,31 @@ spring:
 
 replicate:
   garden-watcher:
-    topics: connect.garden.changes
+    topics: connect.garden.changes.single
     threads-count: 1
     polling-timeout: PT1S
     ignore-exception: true
     report-health-check: true
-    key-deserializer:
-    value-deserializer:
+    key-deserializer: garden.SeedDeserializer
+    value-deserializer: garden.FruitDeserializer
   garden-watcher-in-batch:
     topics: connect.garden.changes.batch
     threads-count: 1
     polling-timeout: PT1S
     ignore-exception: true
     report-health-check: true
-    key-deserializer:
-    value-deserializer:
+    key-deserializer: garden.SeedDeserializer
+    value-deserializer: garden.FruitDeserializer
 
 kafka:
   bootstrap.servers: localhost:9092
   consumer:
     # Kafka consumer properties as keys
     bootstrap.servers: ${kafka.bootstrap.servers}
-    group.id: ${spring.application.name}
+    group.id:
     enable.auto.commit: false
     auto.commit.interval.ms: PT5S
     auto.offset.reset: earliest
     max.poll.interval.ms: PT5M
-    max.poll.records: 200
+    max.poll.records: 20
     session.timeout.ms: PT10S

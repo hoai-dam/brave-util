@@ -18,7 +18,7 @@ import java.util.List;
 public @interface Consumers {
 
     String properties() default "";
-    String[] bootstrapServers() default {};
+    String bootstrapServers() default "";
     String groupId() default "";
     boolean enableAutoCommit() default true;
     int autoCommitIntervalMillis() default 5000;

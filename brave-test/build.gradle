@@ -13,11 +13,11 @@ repositories {
 dependencies {
     implementation "io.github.embeddedkafka:embedded-kafka_2.13:$kafkaClientsVersion"
     implementation 'it.ozimov:embedded-redis:0.7.3'
-    implementation 'com.github.tomakehurst:wiremock-jre8:2.31.0'
+    implementation 'com.github.tomakehurst:wiremock-jre8:2.33.2'
     implementation "org.apache.httpcomponents:fluent-hc:4.5.13"
-    implementation 'org.mybatis:mybatis:3.5.7'
-    implementation 'com.h2database:h2:1.4.200'
-    implementation 'com.zaxxer:HikariCP:5.0.0'
+    implementation 'org.mybatis:mybatis:3.5.10'
+    implementation 'com.h2database:h2:2.1.214'
+    implementation 'com.zaxxer:HikariCP:5.0.1'
 
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
     implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
@@ -30,8 +30,8 @@ dependencies {
     implementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     runtimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 
-    testImplementation 'io.rest-assured:rest-assured:4.4.0'
-    testImplementation 'io.rest-assured:json-path:4.4.0'
+    testImplementation 'io.rest-assured:rest-assured:5.1.1'
+    testImplementation 'io.rest-assured:json-path:5.1.1'
 }
 
 configurations {

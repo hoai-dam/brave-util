@@ -2,8 +2,6 @@ package brave.kafka;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.ConfigKey;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -37,7 +35,7 @@ class ConsumerAnnotationProcessor {
 
         for (String beanName : consumerBeans.keySet()) {
             Object consumerBean = consumerBeans.get(beanName);
-            Map<String, SimpleConsumerGroup<?, ?>> consumerGroups = new ProcessingTask(consumerBean).process();
+            Map<String, SimpleConsumerGroup<?, ?>> consumerGroups = new ConsumersBuilder(consumerBean).process();
             this.consumerGroups.putAll(consumerGroups);
         }
     }
@@ -47,12 +45,12 @@ class ConsumerAnnotationProcessor {
         consumerGroups.values().forEach(SimpleConsumerGroup::start);
     }
 
-    class ProcessingTask {
+    class ConsumersBuilder {
 
         private final Object target;
         private Properties properties;
 
-        public ProcessingTask(Object target) {
+        ConsumersBuilder(Object target) {
             this.target = target;
         }
 
@@ -77,41 +75,13 @@ class ConsumerAnnotationProcessor {
         }
 
         private Properties getKafkaConsumerProperties(Consumers braveConsumers) {
-            Properties props;
+            Properties props = resolver.getProperties(braveConsumers.properties(), ConsumerConfig.configDef());
 
-            if (isNotBlank(braveConsumers.properties())) {
-                props = resolver.getProperties(braveConsumers.properties());
-            } else {
-                props = new Properties();
-            }
-
-            ConfigDef configDef = ConsumerConfig.configDef();
-            for (String propertyName : props.stringPropertyNames()) {
-                String value = props.getProperty(propertyName);
-                ConfigKey configKey = configDef.configKeys().get(propertyName);
-
-                if (propertyName.endsWith(".ms")) {
-                    if (configKey.type() == ConfigDef.Type.SHORT) {
-                        props.put(propertyName, (short) Duration.parse(value).toMillis());
-                    } else if (configKey.type() == ConfigDef.Type.INT) {
-                        props.put(propertyName, (int) Duration.parse(value).toMillis());
-                    } else if (configKey.type() == ConfigDef.Type.LONG) {
-                        props.put(propertyName, Duration.parse(value).toMillis());
-                    }
-                }
-            }
-
-            fallbackConsumerProperties(braveConsumers, props);
-
-            return props;
-        }
-
-        private void fallbackConsumerProperties(Consumers braveConsumers, Properties props) {
             if (isEmpty(props, BOOTSTRAP_SERVERS_CONFIG)) {
-                if (braveConsumers.bootstrapServers().length == 0) {
+                if (isBlank(braveConsumers.bootstrapServers())) {
                     throw new IllegalStateException("No bootstrap servers provided");
                 }
-                props.put(BOOTSTRAP_SERVERS_CONFIG, braveConsumers.bootstrapServers());
+                props.put(BOOTSTRAP_SERVERS_CONFIG, resolver.getString(braveConsumers.bootstrapServers()));
             }
 
             if (isEmpty(props, GROUP_ID_CONFIG)) {
@@ -144,6 +114,8 @@ class ConsumerAnnotationProcessor {
             if (isEmpty(props, SESSION_TIMEOUT_MS_CONFIG)) {
                 props.put(SESSION_TIMEOUT_MS_CONFIG, braveConsumers.sessionTimeoutMillis());
             }
+
+            return props;
         }
 
         private SimpleConsumerGroup<Object, Object> getConsumerGroup(Method method, Consumers.Handler recordConsumer) {
@@ -188,7 +160,7 @@ class ConsumerAnnotationProcessor {
                     .build();
 
             if (cfg.isReportHealthCheck()) {
-                ConsumerAnnotationProcessor.this.config.registerBean("health(" + signature(method) + ")", (HealthIndicator) consumerGroup::health);
+                ConsumerAnnotationProcessor.this.config.registerBean(signature(method), (HealthIndicator) consumerGroup::health);
             }
 
             return consumerGroup;

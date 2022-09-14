@@ -9,19 +9,20 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.serialization.Serdes;
 import scala.collection.immutable.HashMap;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Supplier;
 
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.throwableOfType;
 import static org.apache.kafka.common.serialization.Serdes.String;
 import static scala.jdk.CollectionConverters.MapHasAsScala;
@@ -68,18 +69,6 @@ public class KafkaUtil {
 
         //noinspection resource
         return new KafkaConsumer<>(properties, String().deserializer(), String().deserializer());
-    }
-
-    public static void assignTopicPartitions(KafkaConsumer<?,?> backOrderEventConsumer, String bootstrapServers, String topicName) throws InterruptedException, ExecutionException {
-        try (var adminClient = KafkaUtil.createAdminClient(bootstrapServers)) {
-            List<TopicPartition> topicPartitions = adminClient
-                    .describeTopics(List.of(topicName)).values()
-                    .get(topicName).get()
-                    .partitions().stream()
-                    .map(partitionInfo -> new TopicPartition(topicName, partitionInfo.partition()))
-                    .collect(toList());
-            backOrderEventConsumer.assign(topicPartitions);
-        }
     }
 
     public static AdminClient createAdminClient(String bootstrapServers) {
@@ -131,7 +120,7 @@ public class KafkaUtil {
 
     private static boolean topicExists(AdminClient adminClient, String topicName) {
         try {
-            adminClient.describeTopics(List.of(topicName)).values()
+            adminClient.describeTopics(List.of(topicName)).topicNameValues()
                     .get(topicName)
                     .get();
             return true;
@@ -172,6 +161,26 @@ public class KafkaUtil {
 
         while (!deleteConsumerGroupsResult.all().isDone()) {
             LockSupport.parkNanos(10 * (long) 1e6);
+        }
+    }
+
+    /**
+     * Wait until when certain condition met
+     * @param condition Condition to be checked every 10ms
+     * @param timeout Maximum duration to wait for the condition to be met
+     * @throws TimeoutException Throw when
+     */
+    public static void waitUntil(Supplier<Boolean> condition, Duration timeout) throws TimeoutException {
+        long waitPeriodMillis = 10;
+        long attempts = 0;
+
+        while (!condition.get()) {
+            LockSupport.parkNanos(waitPeriodMillis * (long) 1e6);
+            attempts++;
+
+            if (attempts * waitPeriodMillis > timeout.toMillis()) {
+                throw new TimeoutException();
+            }
         }
     }
 }

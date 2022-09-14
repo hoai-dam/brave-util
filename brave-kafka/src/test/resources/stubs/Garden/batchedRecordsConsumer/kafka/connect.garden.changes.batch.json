@@ -5,8 +5,8 @@
     "key": {
       "name": "Apple"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "offset": 0,
+    "topic": "connect.garden.changes.batch",
     "value": {
       "name": "Apple"
     }
@@ -17,8 +17,8 @@
     "key": {
       "name": "Orange"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "offset": 1,
+    "topic": "connect.garden.changes.batch",
     "value": {
       "name": "Orange"
     }
@@ -29,8 +29,8 @@
     "key": {
       "name": "Banana"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "offset": 2,
+    "topic": "connect.garden.changes.batch",
     "value": {
       "name": "Banana"
     }
@@ -41,8 +41,8 @@
     "key": {
       "name": "Kiwi"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "offset": 3,
+    "topic": "connect.garden.changes.batch",
     "value": {
       "name": "Kiwi"
     }
@@ -53,8 +53,8 @@
     "key": {
       "name": "Mango"
     },
-    "offset": 12981185,
-    "topic": "connect.garden.changes",
+    "offset": 4,
+    "topic": "connect.garden.changes.batch",
     "value": {
       "name": "Mango"
     }
