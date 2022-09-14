@@ -44,24 +44,13 @@ public class DatabaseStub {
     }
 
     private void run(DataSource dataSource, String scriptFile) throws SQLException, IOException {
-        SqlSessionFactory factory = getSqlSessionFactory(dataSource);
+        try (var connection = dataSource.getConnection()) {
+            var sqlRunner = new ScriptRunner(connection);
 
-        try (var session = factory.openSession()) {
-            try (var connection = session.getConnection()) {
-                var sqlRunner = new ScriptRunner(connection);
-
-                try (Reader scriptReader = Resources.getResourceAsReader(scriptFile)) {
-                    sqlRunner.runScript(scriptReader);
-                }
+            try (Reader scriptReader = Resources.getResourceAsReader(scriptFile)) {
+                sqlRunner.runScript(scriptReader);
             }
         }
-    }
-
-    private SqlSessionFactory getSqlSessionFactory(DataSource dataSource) {
-        Configuration mybatisConfig = new Configuration();
-        Environment mybatisEnvironment = new Environment("test", new JdbcTransactionFactory(), dataSource);
-        mybatisConfig.setEnvironment(mybatisEnvironment);
-        return new SqlSessionFactoryBuilder().build(mybatisConfig);
     }
 
     public void load(String datasourceName, String dataFolderClassPath) throws SQLException {
@@ -200,17 +189,13 @@ public class DatabaseStub {
     }
 
     private List<Map<String, Object>> query(DataSource dataSource, String sqlQuery) throws SQLException {
-        SqlSessionFactory factory = getSqlSessionFactory(dataSource);
-
-        try (var session = factory.openSession()) {
-            try (var connection= session.getConnection()) {
-                try (PreparedStatement statement = connection.prepareStatement(sqlQuery)) {
-                    ResultSet resultSet = statement.executeQuery();
-                    if (resultSet == null) {
-                        return new ArrayList<>();
-                    }
-                    return rsToList(resultSet);
+        try (var connection= dataSource.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement(sqlQuery)) {
+                ResultSet resultSet = statement.executeQuery();
+                if (resultSet == null) {
+                    return new ArrayList<>();
                 }
+                return rsToList(resultSet);
             }
         }
     }
@@ -231,5 +216,14 @@ public class DatabaseStub {
         }
 
         return results;
+    }
+
+    public int executeUpdate(String dataSourceName, String sql) throws SQLException {
+        DataSource dataSource = datasources.get(dataSourceName);
+        try (var connection = dataSource.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                return statement.executeUpdate();
+            }
+        }
     }
 }
